@@ -3,8 +3,8 @@ services:
   server:
     build:
       context: .
-      dockerfile: Dockerfile.min
-      #dockerfile: Dockerfile # for tts-1-hd support via xtts_v2
+      #dockerfile: Dockerfile.min
+      dockerfile: Dockerfile # for tts-1-hd support via xtts_v2
     stdin_open: true
     tty: true
     runtime: nvidia
@@ -18,3 +18,5 @@ services:
               capabilities: [gpu]
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app/

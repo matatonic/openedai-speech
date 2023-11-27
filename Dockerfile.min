@@ -7,11 +7,10 @@ RUN apt-get update && \
 
 #RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
-COPY *.py *.yaml /app/
+COPY *.py *.yaml *.sh /app/
 WORKDIR /app
 RUN pip install piper-tts
 
-RUN piper --update-voices --data-dir voices --download-dir voices --model en_US-libritts_r-medium < /dev/null > /dev/null
-RUN piper --data-dir voices --download-dir voices --model en_GB-northern_english_male-medium < /dev/null > /dev/null
+RUN download_voices_tts-1.sh
 
 CMD python3 main.py
