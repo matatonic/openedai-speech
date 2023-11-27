@@ -1,0 +1,17 @@
+FROM ubuntu:22.04
+
+# tts-1 only
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y wget ffmpeg python3-pip python3-yaml python3-fastapi python3-uvicorn && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+#RUN git clone https://github.com/matatonic/openedai-speech /app
+RUN mkdir -p /app/voices
+COPY *.py *.yaml /app/
+WORKDIR /app
+RUN pip install piper-tts
+
+RUN piper --update-voices --data-dir voices --download-dir voices --model en_US-libritts_r-medium < /dev/null > /dev/null
+RUN piper --data-dir voices --download-dir voices --model en_GB-northern_english_male-medium < /dev/null > /dev/null
+
+CMD python3 main.py
