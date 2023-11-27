@@ -12,6 +12,8 @@ Installation instructions:
 
 ```pip install -r requirements.txt```
 
+You need to install [ffmpeg](https://ffmpeg.org/download.html)
+
 To download voices in advance:
 
 for the tts-1 model:
