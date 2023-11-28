@@ -23,7 +23,7 @@ Details:
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
-Version: 0.2.0
+Version: 0.6.0
 
 Last update: 2023-11-27
 
