@@ -2,4 +2,4 @@ fastapi
 uvicorn
 piper-tts
 TTS
-#onnxruntime-gpu #not needed
+onnxruntime-gpu

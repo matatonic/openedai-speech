@@ -5,12 +5,13 @@ RUN apt-get update && \
     apt-get install --no-install-recommends -y wget ffmpeg python3-pip python3-yaml python3-fastapi python3-uvicorn && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN pip install piper-tts
+
 #RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
-COPY *.py *.yaml *.sh /app/
+COPY *.py *.yaml *.txt *.md *.sh /app/
 WORKDIR /app
-RUN pip install piper-tts
 
 RUN download_voices_tts-1.sh
 
-CMD python3 main.py
+CMD python3 main.py --host 0.0.0.0 --port 8000 --xtts_device none

@@ -1,39 +1,74 @@
-openedai API for audio/speech
+OpenedAI API for audio/speech
 -----------------------------
 
 This is an API clone of the OpenAI API for text to speech audio generation.
 
-This is v0.1, so please excuse the rough docs and configuration.
+* Compatible with the OpenAI audio/speech API
+* Does not connect to OpenAI
+* Does not require a (real) OpenAI API Key. 
+* Not affiliated with OpenAI in any way.
 
-It currently supports 'tts-1' via piper tts (fast, ~1 sec latency), and 'tts-1-hd' via xtts_v2 (slow, also uses a couple gigs of gpu vram).
+API Support:
+* model 'tts-1' via [piper tts](https://github.com/rhasspy/piper) (fast, can use cpu)
+* model 'tts-1-hd' via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 (fast, uses almost 4GB GPU VRAM)
+* Can be run without TTS/xtts_v2, entirely on cpu
 
-Installation instructions:
---------------------------
+Compatibility:
+* `tts-1`: `alloy`, `echo`, `fable`, `onyx`, `nova`, and `shimmer` (configurable)
+* `tts-1-hd`: `alloy`, (incomplete, they're all alloy)
+* Custom cloned voices can be used for tts-1-hd, just save a WAV file in `/voices/`
+* You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) and xtts_v2 speaker clones via `voice_to_speaker.yaml`
+* response_format: mp3, opus, aac, or flac
+* Sometimes certain words or symbols will sound bad, you can fix them with regex via `pre_process_map.yaml`
 
-```pip install -r requirements.txt```
+If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
-You need to install [ffmpeg](https://ffmpeg.org/download.html)
+Version: 0.2.0
 
-To download voices in advance:
+Last update: 2023-11-27
 
-for the tts-1 model:
+API Documentation
+-----------------
+
+* [OpenAI Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech)
+* [OpenAI API Reference](https://platform.openai.com/docs/api-reference/audio/createSpeech)
+
+
+Installation instructions
+-------------------------
+
 ```shell
-piper --update-voices --data-dir voices --download-dir voices --model en_US-libritts_r-medium < /dev/null > /dev/null
-piper --data-dir voices --download-dir voices --model en_GB-northern_english_male-medium < /dev/null > /dev/null
+# Install the Python requirements
+pip install -r requirements.txt
+# install ffmpeg
+sudo apt install ffmpeg
+# Download the voice models:
+# for tts-1
+bash download_voices_tts-1.sh
+# and for tts-1-hd
+bash download_voices_tts-1-hd.sh
 ```
 
-for tts-1-hd:
-```shell
-COQUI_TOS_AGREED=1
-tts --model_name "tts_models/multilingual/multi-dataset/xtts_v2" --text "." --language_idx en > /dev/null
+Usage
+-----
+
+```
+usage: main.py [-h] [--piper_cuda] [--xtts_device XTTS_DEVICE] [--preload_xtts] [-P PORT] [-H HOST]
+
+OpenedAI Speech API Server
+
+options:
+  -h, --help            show this help message and exit
+  --piper_cuda          Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me, but cpu is fast enough (default: False)
+  --xtts_device XTTS_DEVICE
+                        Set the device for the xtts model. The special value of 'none' will use piper for all models. (default: cuda)
+  --preload_xtts        Preload the xtts model. By default it's loaded on first use. (default: False)
+  -P PORT, --port PORT  Server tcp port (default: 8000)
+  -H HOST, --host HOST  Host to listen on, Ex. 0.0.0.0 (default: localhost)
 ```
 
-Run the server, it listens on ```port 8000``` by default:
-
-```python main.py```
-
-API Usage
----------
+Sample API Usage
+----------------
 
 You can use it like this:
 
@@ -89,12 +124,4 @@ docker compose build
 docker compose up
 ```
 
-By default it will build a minimal docker image with piper and tts-1 support only. You can edit docker-compose.yml to change this.
-
-Voice sounds bad on some words or symbols? Check out ```pre_process_map.yaml``` and add a regular express to replace it with something that sounds right.
-
-Want to change the voices or add your own? Check out ```voice_to_speaker.yaml```. I tried to map the voices to something similar to the OpenAI voices, but some are better than others.
-
-If you find a better voice match, please let me know so I can update the defaults.
-
-Voice models for tts-1-hd/xtts2 are incomplete, you can add your own WAV file samples to make more voices, see allow.wav for a sample.
+If you want a minimal docker image with piper only (see: Dockerfile.min). You can edit the `docker-compose.yml` to change this.
