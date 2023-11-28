@@ -32,13 +32,13 @@ tts-1-hd:
     speaker: voices/fable.wav
   onyx:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/voices/onyx.wav
+    speaker: voices/onyx.wav
   nova:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/voices/nova.wav
+    speaker: voices/nova.wav
   shimmer:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/voices/shimmer.wav
+    speaker: voices/shimmer.wav
   me:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/voices/me.wav # this could be you
+    speaker: voices/me.wav # this could be you

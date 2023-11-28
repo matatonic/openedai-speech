@@ -18,6 +18,7 @@ app = FastAPI()
 
 class xtts_wrapper():
     def __init__(self, model_name):
+        global args
         self.xtts = TTS(model_name=model_name, progress_bar=False).to(args.xtts_device)
 
     def tts(self, text, speaker_wav, speed):
@@ -57,6 +58,7 @@ class GenerateSpeechRequest(BaseModel):
 
 @app.post("/v1/audio/speech")
 async def generate_speech(request: GenerateSpeechRequest):
+    global xtts, args
     input_text = preprocess(request.input)
     model = request.model
     voice = request.voice
@@ -132,7 +134,7 @@ if __name__ == "__main__":
     parser.add_argument('--piper_cuda', action='store_true', default=False, help="Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me, but cpu is fast enough") 
     parser.add_argument('--xtts_device', action='store', default="cuda", help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
     parser.add_argument('--preload_xtts', action='store_true', default=False, help="Preload the xtts model. By default it's loaded on first use.")
-    parser.add_argument('-P', '--port', action='store', default=8000, help="Server tcp port")
+    parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")
     parser.add_argument('-H', '--host', action='store', default='localhost', help="Host to listen on, Ex. 0.0.0.0")
 
     args = parser.parse_args()

@@ -9,8 +9,8 @@ services:
     tty: true
     ports:
       - "8000:8000"
-    #volumes:
-    #  - .:/app/
+    volumes:
+      - .:/app/
     # Below can be removed if not using GPU
     runtime: nvidia
     deploy:
