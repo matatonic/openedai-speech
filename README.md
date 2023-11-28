@@ -1,9 +1,10 @@
-OpenedAI API for audio/speech
------------------------------
+OpenedAI Speech
+---------------
 
-This is an API clone of the OpenAI API for text to speech audio generation.
+An OpenAI API compatible text to speech server.
 
 * Compatible with the OpenAI audio/speech API
+* Serves the /v1/audio/speech endpoint
 * Does not connect to the OpenAI API and does not require a (real) OpenAI API Key
 * Not affiliated with OpenAI in any way
 
