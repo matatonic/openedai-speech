@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 
 # tts-1 only
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y wget ffmpeg python3-pip python3-yaml python3-fastapi python3-uvicorn && \
+    apt-get install --no-install-recommends -y wget ffmpeg python-is-python3 python3-pip python3-yaml python3-fastapi python3-uvicorn && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN pip install piper-tts
@@ -14,4 +14,4 @@ WORKDIR /app
 
 RUN download_voices_tts-1.sh
 
-CMD python3 main.py --host 0.0.0.0 --port 8000 --xtts_device none
+CMD python main.py --host 0.0.0.0 --port 8000 --xtts_device none

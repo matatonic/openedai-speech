@@ -1,7 +1,7 @@
 FROM nvidia/cuda:11.8.0-base-ubuntu22.04
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y python3-pip wget ffmpeg && \
+    apt-get install --no-install-recommends -y python-is-python3 python3-pip wget ffmpeg && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 #RUN git clone https://github.com/matatonic/openedai-speech /app
@@ -15,4 +15,4 @@ RUN ./download_voices_tts-1.sh
 RUN ./download_voices_tts-1-hd.sh
 
 ENV COQUI_TOS_AGREED=1
-CMD python3 main.py --host 0.0.0.0 --port 8000 --preload_xtts
+CMD python main.py --host 0.0.0.0 --port 8000 --preload_xtts
