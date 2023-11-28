@@ -26,16 +26,19 @@ tts-1-hd:
     speaker: voices/alloy.wav
   echo:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/alloy.wav # voices/echo.wav # TODO
+    speaker: voices/echo.wav
   fable:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/alloy.wav # voices/fable.wav # TODO
+    speaker: voices/fable.wav
   onyx:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/alloy.wav # voices/onyx.wav # TODO
+    speaker: voices/voices/onyx.wav
   nova:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/alloy.wav # voices/nova.wav # TODO
+    speaker: voices/voices/nova.wav
   shimmer:
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/alloy.wav # voices/shimmer.wav # TODO
+    speaker: voices/voices/shimmer.wav
+  me:
+    model: tts_models/multilingual/multi-dataset/xtts_v2
+    speaker: voices/voices/me.wav # this could be you
