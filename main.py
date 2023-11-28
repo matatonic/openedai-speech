@@ -10,7 +10,6 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 import uvicorn
 from pydantic import BaseModel
-from TTS.api import TTS
 
 xtts = None
 args = None
@@ -31,7 +30,7 @@ class xtts_wrapper():
             speed=speed,
             file_path=file_path,
         )
-        
+
         os.unlink(file_path)
         return tf
 
@@ -104,7 +103,7 @@ async def generate_speech(request: GenerateSpeechRequest):
         tts_proc.stdin.write(bytearray(input_text.encode('utf-8')))
         tts_proc.stdin.close()
         tts_io_out = tts_proc.stdout
-        
+
     # Use xtts_v2 for tts-1-hd
     elif model == 'tts-1-hd':
         if not xtts:
@@ -115,13 +114,13 @@ async def generate_speech(request: GenerateSpeechRequest):
         # tts speed doesn't seem to work well
         if speed < 0.5:
             speed = speed / 0.5
-            ffmpeg_args.extend(["-af", f"atempo=0.5"]) 
+            ffmpeg_args.extend(["-af", "atempo=0.5"]) 
         if speed > 1.0:
             ffmpeg_args.extend(["-af", f"atempo={speed}"]) 
             speed = 1.0
 
         tts_io_out = xtts.tts(text=input_text, speaker_wav=speaker, speed=speed)
-    
+
     # Pipe the output from piper/xtts to the input of ffmpeg
     ffmpeg_args.extend(["-"])
     ffmpeg_proc = subprocess.Popen(ffmpeg_args, stdin=tts_io_out, stdout=subprocess.PIPE)
@@ -134,7 +133,7 @@ if __name__ == "__main__":
         prog='main.py',
         description='OpenedAI Speech API Server',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    
+
     parser.add_argument('--piper_cuda', action='store_true', default=False, help="Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me, but cpu is fast enough") 
     parser.add_argument('--xtts_device', action='store', default="cuda", help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
     parser.add_argument('--preload_xtts', action='store_true', default=False, help="Preload the xtts model. By default it's loaded on first use.")
@@ -142,6 +141,9 @@ if __name__ == "__main__":
     parser.add_argument('-H', '--host', action='store', default='localhost', help="Host to listen on, Ex. 0.0.0.0")
 
     args = parser.parse_args()
+
+    if args.xtts_device != "none":
+        from TTS.api import TTS
 
     if args.preload_xtts:
         xtts = xtts_wrapper("tts_models/multilingual/multi-dataset/xtts_v2")

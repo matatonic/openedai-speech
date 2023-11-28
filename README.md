@@ -40,8 +40,8 @@ Installation instructions
 ```shell
 # Install the Python requirements
 pip install -r requirements.txt
-# install ffmpeg
-sudo apt install ffmpeg
+# install ffmpeg & curl
+sudo apt install ffmpeg curl
 # Download the voice models:
 # for tts-1
 bash download_voices_tts-1.sh
@@ -120,4 +120,4 @@ docker compose build
 docker compose up
 ```
 
-If you want a minimal docker image with piper only (see: Dockerfile.min). You can edit the `docker-compose.yml` to change this.
+If you want a minimal docker image with piper support only (900MB vs. 13GB, see: Dockerfile.min). You can edit the `docker-compose.yml` to change this.

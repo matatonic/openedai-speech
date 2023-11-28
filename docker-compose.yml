@@ -3,14 +3,14 @@ services:
   server:
     build:
       context: .
-      #dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required
-      dockerfile: Dockerfile # for tts-1-hd support via xtts_v2, ~4GB VRAM required
+      #dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required, ~900MB
+      dockerfile: Dockerfile # for tts-1-hd support via xtts_v2, ~4GB VRAM required, 13GB
     stdin_open: true
     tty: true
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app/
+#    volumes:
+#      - .:/app/
     # Below can be removed if not using GPU
     runtime: nvidia
     deploy:
