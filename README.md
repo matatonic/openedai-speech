@@ -4,7 +4,7 @@ OpenedAI Speech
 An OpenAI API compatible text to speech server.
 
 * Compatible with the OpenAI audio/speech API
-* Serves the /v1/audio/speech endpoint
+* Serves the [/v1/audio/speech endpoint](https://platform.openai.com/docs/api-reference/audio/createSpeech)
 * Does not connect to the OpenAI API and does not require a (real) OpenAI API Key
 * Not affiliated with OpenAI in any way
 
