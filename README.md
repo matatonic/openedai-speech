@@ -4,21 +4,21 @@ OpenedAI API for audio/speech
 This is an API clone of the OpenAI API for text to speech audio generation.
 
 * Compatible with the OpenAI audio/speech API
-* Does not connect to OpenAI
-* Does not require a (real) OpenAI API Key. 
-* Not affiliated with OpenAI in any way.
+* Does not connect to the OpenAI API and does not require a (real) OpenAI API Key
+* Not affiliated with OpenAI in any way
 
-API Support:
-* model 'tts-1' via [piper tts](https://github.com/rhasspy/piper) (fast, can use cpu)
-* model 'tts-1-hd' via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 (fast, uses almost 4GB GPU VRAM)
-* Can be run without TTS/xtts_v2, entirely on cpu
-
-Compatibility:
+Full Compatibility:
 * `tts-1`: `alloy`, `echo`, `fable`, `onyx`, `nova`, and `shimmer` (configurable)
 * `tts-1-hd`:  `alloy`, `echo`, `fable`, `onyx`, `nova`, and `shimmer` (configurable, uses OpenAI samples by default)
+* response_format: `mp3`, `opus`, `aac`, or `flac`
+* speed 0.25-4.0 (and more)
+
+Details:
+* model 'tts-1' via [piper tts](https://github.com/rhasspy/piper) (fast, can use cpu)
+* model 'tts-1-hd' via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, uses almost 4GB GPU VRAM)
+* Can be run without TTS/xtts_v2, entirely on cpu
 * Custom cloned voices can be used for tts-1-hd, just save a WAV file in `/voices/`
 * You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) and xtts_v2 speaker clones via `voice_to_speaker.yaml`
-* response_format: `mp3`, `opus`, `aac`, or `flac`
 * Sometimes certain words or symbols will sound bad, you can fix them with regex via `pre_process_map.yaml`
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
@@ -84,14 +84,10 @@ curl http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -
 
 Or just like this:
 
-
 ```shell
 curl http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d '{
     "input": "The quick brown fox jumped over the lazy dog."}' > speech.mp3
 ```
-
-
-
 
 Or like this example from the [OpenAI Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech):
 

@@ -18,7 +18,7 @@ curl -s http://localhost:8000/v1/audio/speech  -H "Content-Type: application/jso
     \"speed\": 1.0
   }" | mpv --really-quiet -
 
-wget -q https://cdn.openai.com/API/docs/audio/$voice.wav -O - | mpv --really-quiet -
+curl -s https://cdn.openai.com/API/docs/audio/$voice.wav | mpv --really-quiet -
 
 curl -s http://localhost:8000/v1/audio/speech  -H "Content-Type: application/json"   -d "{
     \"model\": \"tts-1\",
@@ -36,3 +36,30 @@ curl -s http://localhost:8000/v1/audio/speech  -H "Content-Type: application/jso
 
 done
 
+curl -s http://localhost:8000/v1/audio/speech  -H "Content-Type: application/json"   -d "{
+    \"model\": \"tts-1\",
+    \"input\": \"the slowest voice\",
+    \"voice\": \"onyx\",
+    \"speed\": 0.25
+  }" | mpv --really-quiet -
+
+curl -s http://localhost:8000/v1/audio/speech  -H "Content-Type: application/json"   -d "{
+    \"model\": \"tts-1-hd\",
+    \"input\": \"the slowest HD voice\",
+    \"voice\": \"onyx\",
+    \"speed\": 0.25
+  }" | mpv --really-quiet -
+
+curl -s http://localhost:8000/v1/audio/speech  -H "Content-Type: application/json"   -d "{
+    \"model\": \"tts-1\",
+    \"input\": \"And this is how fast it can go, the fastest voice\",
+    \"voice\": \"nova\",
+    \"speed\": 4.0
+  }" | mpv --really-quiet -
+
+curl -s http://localhost:8000/v1/audio/speech  -H "Content-Type: application/json"   -d "{
+    \"model\": \"tts-1-hd\",
+    \"input\": \"And this is how fast it can go, the fastest HD voice\",
+    \"voice\": \"nova\",
+    \"speed\": 4.0
+  }" | mpv --really-quiet -

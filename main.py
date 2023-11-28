@@ -112,9 +112,13 @@ async def generate_speech(request: GenerateSpeechRequest):
 
         tts_model, speaker = model, speaker = map_voice_to_speaker(voice, 'tts-1-hd')
 
-        if speed > 2.0: # tts has a max speed of 2.0
-            ffmpeg_args.extend(["-af", "atempo=2.0"]) 
-            speed = min(speed / 2.0, 2.0)
+        # tts speed doesn't seem to work well
+        if speed < 0.5:
+            speed = speed / 0.5
+            ffmpeg_args.extend(["-af", f"atempo=0.5"]) 
+        if speed > 1.0:
+            ffmpeg_args.extend(["-af", f"atempo={speed}"]) 
+            speed = 1.0
 
         tts_io_out = xtts.tts(text=input_text, speaker_wav=speaker, speed=speed)
     

@@ -4,26 +4,32 @@ tts-1:
     speaker: set your own speaker
   alloy: 
     model: voices/en_US-libritts_r-medium.onnx
-    speaker: 118 # 118, 64, 79, 80, 101, 130
+    speaker: 79 # 64, 79, 80, 101, 130
   echo:
-    model: voices/en_US-libritts_r-medium.onnx # or en_US-ryan-high:0
-    speaker: 52 # 52, 102, 134
+    model: voices/en_US-libritts_r-medium.onnx
+    speaker: 134 # 52, 102, 134
+  echo-alt:
+    model: voices/en_US-ryan-high.onnx
+    speaker: # default speaker
   fable:
     model: voices/en_GB-northern_english_male-medium.onnx
     speaker: # default speaker
   onyx:
     model: voices/en_US-libritts_r-medium.onnx
-    speaker: 55 # 55, 72, 90, 104, 132, 136, 137, 159
+    speaker: 159 # 55, 90, 132, 136, 137, 159
   nova:
     model: voices/en_US-libritts_r-medium.onnx
-    speaker: 57 # 57, 61, 107, 150, 162
+    speaker: 107 # 57, 61, 107, 150, 162
   shimmer:
     model: voices/en_US-libritts_r-medium.onnx
     speaker: 163
 tts-1-hd:
   alloy: 
     model: tts_models/multilingual/multi-dataset/xtts_v2
-    speaker: voices/alloy.wav
+    speaker: voices/alloy-alt.wav
+  alloy-orig: 
+    model: tts_models/multilingual/multi-dataset/xtts_v2
+    speaker: voices/alloy.wav # it's REALLY BAD
   echo:
     model: tts_models/multilingual/multi-dataset/xtts_v2
     speaker: voices/echo.wav
