@@ -12,6 +12,6 @@ RUN mkdir -p /app/voices
 COPY *.py *.yaml *.txt *.md *.sh LICENSE /app/
 WORKDIR /app
 
-RUN download_voices_tts-1.sh
+RUN ./download_voices_tts-1.sh
 
 CMD python main.py --host 0.0.0.0 --port 8000 --xtts_device none
