@@ -1,13 +1,12 @@
 FROM nvidia/cuda:11.8.0-base-ubuntu22.04
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y python-is-python3 python3-pip wget ffmpeg && \
+    apt-get install --no-install-recommends -y python-is-python3 python3-pip ffmpeg && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 #RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
 COPY *.py *.yaml *.txt *.md *.sh LICENSE /app/
-COPY voices/download_samples.sh /app/voices/
 WORKDIR /app
 
 RUN pip install -r requirements.txt
