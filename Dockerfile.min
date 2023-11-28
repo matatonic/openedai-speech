@@ -9,7 +9,7 @@ RUN pip install piper-tts
 
 #RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
-COPY *.py *.yaml *.txt *.md *.sh /app/
+COPY *.py *.yaml *.txt *.md *.sh LICENSE /app/
 WORKDIR /app
 
 RUN download_voices_tts-1.sh

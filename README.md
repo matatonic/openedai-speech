@@ -15,10 +15,10 @@ API Support:
 
 Compatibility:
 * `tts-1`: `alloy`, `echo`, `fable`, `onyx`, `nova`, and `shimmer` (configurable)
-* `tts-1-hd`: `alloy`, (incomplete, they're all alloy)
+* `tts-1-hd`:  `alloy`, `echo`, `fable`, `onyx`, `nova`, and `shimmer` (configurable, uses OpenAI samples by default)
 * Custom cloned voices can be used for tts-1-hd, just save a WAV file in `/voices/`
 * You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) and xtts_v2 speaker clones via `voice_to_speaker.yaml`
-* response_format: mp3, opus, aac, or flac
+* response_format: `mp3`, `opus`, `aac`, or `flac`
 * Sometimes certain words or symbols will sound bad, you can fix them with regex via `pre_process_map.yaml`
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.

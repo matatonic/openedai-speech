@@ -6,8 +6,8 @@ RUN apt-get update && \
 
 #RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
-COPY *.py *.yaml *.txt *.md *.sh /app/
-COPY ./voices/alloy.wav /app/voices/alloy.wav
+COPY *.py *.yaml *.txt *.md *.sh LICENSE /app/
+COPY voices/download_samples.sh /app/voices/
 WORKDIR /app
 
 RUN pip install -r requirements.txt
