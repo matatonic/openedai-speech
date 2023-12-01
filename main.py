@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import yaml
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, Response
+from fastapi.responses import StreamingResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic import BaseModel
@@ -57,11 +57,11 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-@app.get("/")
-@app.head("/")
-@app.options("/")
-async def root() -> Response:
-    return Response(status_code=200, content="", media_type="text/plain")
+@app.get("/", response_class=PlainTextResponse)
+@app.head("/", response_class=PlainTextResponse)
+@app.options("/", response_class=PlainTextResponse)
+async def root():
+    return PlainTextResponse(content="")
 
 class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
@@ -70,7 +70,7 @@ class GenerateSpeechRequest(BaseModel):
     response_format: str = "mp3" # mp3, opus, aac, flac
     speed: float = 1.0 # 0.25 - 4.0
 
-@app.post("/v1/audio/speech")
+@app.post("/v1/audio/speech", response_class=StreamingResponse)
 async def generate_speech(request: GenerateSpeechRequest):
     global xtts, args
     input_text = preprocess(request.input)
