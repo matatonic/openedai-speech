@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import yaml
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic import BaseModel
@@ -57,13 +57,11 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-@app.get("/livez")
-async def livez():
-    return "OK"
-
+@app.get("/")
+@app.head("/")
 @app.options("/")
-async def options():
-    return JSONResponse(content="OK")
+async def root() -> Response:
+    return Response(status_code=200, content="", media_type="text/plain")
 
 class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
