@@ -7,7 +7,8 @@ import subprocess
 import tempfile
 import yaml
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic import BaseModel
 
@@ -47,6 +48,22 @@ def map_voice_to_speaker(voice: str, model: str):
     with open('voice_to_speaker.yaml', 'r') as file:
         voice_map = yaml.safe_load(file)
         return voice_map[model][voice]['model'], voice_map[model][voice]['speaker'], 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+@app.get("/livez")
+async def livez():
+    return "OK"
+
+@app.options("/")
+async def options():
+    return JSONResponse(content="OK")
 
 class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
