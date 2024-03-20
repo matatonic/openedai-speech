@@ -25,26 +25,26 @@ tts-1:
     speaker: 163
 tts-1-hd:
   alloy: 
-    model: tts_models/multilingual/multi-dataset/xtts_v2
+    model: xtts
     speaker: voices/alloy-alt.wav
   alloy-orig: 
-    model: tts_models/multilingual/multi-dataset/xtts_v2
+    model: xtts
     speaker: voices/alloy.wav # it's REALLY BAD
   echo:
-    model: tts_models/multilingual/multi-dataset/xtts_v2
+    model: xtts
     speaker: voices/echo.wav
   fable:
-    model: tts_models/multilingual/multi-dataset/xtts_v2
+    model: xtts
     speaker: voices/fable.wav
   onyx:
-    model: tts_models/multilingual/multi-dataset/xtts_v2
+    model: xtts
     speaker: voices/onyx.wav
   nova:
-    model: tts_models/multilingual/multi-dataset/xtts_v2
+    model: xtts
     speaker: voices/nova.wav
   shimmer:
-    model: tts_models/multilingual/multi-dataset/xtts_v2
+    model: xtts
     speaker: voices/shimmer.wav
   me:
-    model: tts_models/multilingual/multi-dataset/xtts_v2
+    model: xtts_v2.0.2 # you can specify different xtts version
     speaker: voices/me.wav # this could be you

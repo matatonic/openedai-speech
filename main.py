@@ -17,9 +17,10 @@ args = None
 app = FastAPI()
 
 class xtts_wrapper():
-    def __init__(self, model_name):
+    def __init__(self, model_name, device):
         global args
-        self.xtts = TTS(model_name=model_name, progress_bar=False).to(args.xtts_device)
+        self.model_name = model_name
+        self.xtts = TTS(model_name=model_name, progress_bar=False).to(device)
 
     def tts(self, text, speaker_wav, speed):
         tf, file_path = tempfile.mkstemp(suffix='.wav')
@@ -119,12 +120,13 @@ async def generate_speech(request: GenerateSpeechRequest):
         tts_proc.stdin.close()
         tts_io_out = tts_proc.stdout
 
-    # Use xtts_v2 for tts-1-hd
+    # Use xtts for tts-1-hd
     elif model == 'tts-1-hd':
-        if not xtts:
-            xtts = xtts_wrapper("tts_models/multilingual/multi-dataset/xtts_v2")
-
         tts_model, speaker = model, speaker = map_voice_to_speaker(voice, 'tts-1-hd')
+
+        if not xtts or xtts.model_name != tts_model:
+            xtts = xtts_wrapper(tts_model, device=args.xtts_device)
+            # XXX probably should GC/torch cleanup here
 
         # tts speed doesn't seem to work well
         if speed < 0.5:
@@ -151,7 +153,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--piper_cuda', action='store_true', default=False, help="Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me, but cpu is fast enough") 
     parser.add_argument('--xtts_device', action='store', default="cuda", help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
-    parser.add_argument('--preload_xtts', action='store_true', default=False, help="Preload the xtts model. By default it's loaded on first use.")
+    parser.add_argument('--preload', action='store', default=None, help="Preload a model (Ex. 'xtts'). By default it's loaded on first use.")
     parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")
     parser.add_argument('-H', '--host', action='store', default='localhost', help="Host to listen on, Ex. 0.0.0.0")
 
@@ -160,7 +162,7 @@ if __name__ == "__main__":
     if args.xtts_device != "none":
         from TTS.api import TTS
 
-    if args.preload_xtts:
-        xtts = xtts_wrapper("tts_models/multilingual/multi-dataset/xtts_v2")
+    if args.preload:
+        xtts = xtts_wrapper(args.preload, device=args.xtts_device)
 
-    uvicorn.run(app, host=args.host, port=args.port) # , root_path=cwd, access_log=False, log_level="info", ssl_keyfile="cert.pem", ssl_certfile="cert.pem")
+    uvicorn.run(app, host=args.host, port=args.port)
