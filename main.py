@@ -71,6 +71,21 @@ class GenerateSpeechRequest(BaseModel):
     response_format: str = "mp3" # mp3, opus, aac, flac
     speed: float = 1.0 # 0.25 - 4.0
 
+def build_ffmpeg_args(sample_rate, response_format):
+    # Convert the output to the desired format using ffmpeg
+    ffmpeg_args = ["ffmpeg", "-loglevel", "error", "-f", "s16le", "-ar", sample_rate, "-ac", "1", "-i", "-"]
+    
+    if response_format == "mp3":
+        ffmpeg_args.extend(["-f", "mp3", "-c:a", "libmp3lame", "-ab", "64k"])
+    elif response_format == "opus":
+        ffmpeg_args.extend(["-f", "ogg", "-c:a", "libopus"])
+    elif response_format == "aac":
+        ffmpeg_args.extend(["-f", "adts", "-c:a", "aac", "-ab", "64k"])
+    elif response_format == "flac":
+        ffmpeg_args.extend(["-f", "flac", "-c:a", "flac"])
+
+    return ffmpeg_args
+
 @app.post("/v1/audio/speech", response_class=StreamingResponse)
 async def generate_speech(request: GenerateSpeechRequest):
     global xtts, args
@@ -90,18 +105,7 @@ async def generate_speech(request: GenerateSpeechRequest):
     elif response_format == "flac":
         media_type = "audio/x-flac"
 
-    # Convert the output to the desired format using ffmpeg
-    ffmpeg_args = ["ffmpeg", "-loglevel", "error", "-f", "s16le", "-ar", "22050", "-ac", "1", "-i", "-"]
-
-    if response_format == "mp3":
-        ffmpeg_args.extend(["-f", "mp3", "-c:a", "libmp3lame", "-ab", "64k"])
-    elif response_format == "opus":
-        ffmpeg_args.extend(["-f", "ogg", "-c:a", "libopus"])
-    elif response_format == "aac":
-        ffmpeg_args.extend(["-f", "adts", "-c:a", "aac", "-ab", "64k"])
-    elif response_format == "flac":
-        ffmpeg_args.extend(["-f", "flac", "-c:a", "flac"])
-
+    ffmpeg_args = None
     tts_io_out = None
 
     # Use piper for tts-1, and if xtts_device == none use for all models.
@@ -119,6 +123,7 @@ async def generate_speech(request: GenerateSpeechRequest):
         tts_proc.stdin.write(bytearray(input_text.encode('utf-8')))
         tts_proc.stdin.close()
         tts_io_out = tts_proc.stdout
+        ffmpeg_args = build_ffmpeg_args("22050", response_format)
 
     # Use xtts for tts-1-hd
     elif model == 'tts-1-hd':
@@ -127,6 +132,9 @@ async def generate_speech(request: GenerateSpeechRequest):
         if not xtts or xtts.model_name != tts_model:
             xtts = xtts_wrapper(tts_model, device=args.xtts_device)
             # XXX probably should GC/torch cleanup here
+
+        # input sample rate is 22050, output is 24000...
+        ffmpeg_args = build_ffmpeg_args("24000", response_format)
 
         # tts speed doesn't seem to work well
         if speed < 0.5:
@@ -153,7 +161,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--piper_cuda', action='store_true', default=False, help="Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me, but cpu is fast enough") 
     parser.add_argument('--xtts_device', action='store', default="cuda", help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
-    parser.add_argument('--preload', action='store', default=None, help="Preload a model (Ex. 'xtts'). By default it's loaded on first use.")
+    parser.add_argument('--preload', action='store', default=None, help="Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use.")
     parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")
     parser.add_argument('-H', '--host', action='store', default='localhost', help="Host to listen on, Ex. 0.0.0.0")
 

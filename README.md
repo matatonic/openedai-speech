@@ -24,11 +24,11 @@ Details:
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
-Version: 0.7.0
-
-Last update: 2024-03-20
+Version: 0.7.2, 2024-03-20
 
 * Allow different xtts versions per voice in `voice_to_speaker.yaml`, ex. xtts_v2.0.2
+* Quality: Fix xtts sample rate (24000 vs. 22050 for piper)
+* use CUDA 12.2-base in Dockerfile
 
 API Documentation
 -----------------
@@ -56,16 +56,20 @@ Usage
 -----
 
 ```
-usage: main.py [-h] [--piper_cuda] [--xtts_device XTTS_DEVICE] [--preload_xtts] [-P PORT] [-H HOST]
+usage: main.py [-h] [--piper_cuda] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT]
+               [-H HOST]
 
 OpenedAI Speech API Server
 
 options:
   -h, --help            show this help message and exit
-  --piper_cuda          Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me, but cpu is fast enough (default: False)
+  --piper_cuda          Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me,
+                        but cpu is fast enough (default: False)
   --xtts_device XTTS_DEVICE
-                        Set the device for the xtts model. The special value of 'none' will use piper for all models. (default: cuda)
-  --preload_xtts        Preload the xtts model. By default it's loaded on first use. (default: False)
+                        Set the device for the xtts model. The special value of 'none' will use
+                        piper for all models. (default: cuda)
+  --preload PRELOAD     Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on
+                        first use. (default: None)
   -P PORT, --port PORT  Server tcp port (default: 8000)
   -H HOST, --host HOST  Host to listen on, Ex. 0.0.0.0 (default: localhost)
 ```
@@ -124,3 +128,31 @@ docker compose up
 ```
 
 If you want a minimal docker image with piper support only (900MB vs. 13GB, see: Dockerfile.min). You can edit the `docker-compose.yml` to change this.
+
+Custom Voices Howto
+-------------------
+
+Custom voices should be mono 22050 hz sample rate WAV files with low noise (no background music, etc.) and not contain any partial words. Sample voices for xtts should be at least 6 seconds, but can be longer, but longer doesn't always produce better results.
+
+You can use FFmpeg to process your audio files and prepare them for xtts, here are some examples:
+
+```shell
+# convert a multi-channel audio file to mono, set sample rate to 22050 hz, trim to 6 seconds, and output as WAV file.
+ffmpeg -i input.mp3 -ac 1 -ar 22050 -t 6 -y me.wav
+# use a simple noise filter to clean up audio, and select a start time start for sampling.
+ffmpeg -i input.wav -af "highpass=f=200, lowpass=f=3000" -ac 1 -ar 22050 -ss 00:13:26.2 -t 6 -y me.wav
+# A more complex noise reduction setup with volume adjustment
+ffmpeg -i input.mkv -af "highpass=f=200, lowpass=f=3000, volume=5, afftdn=nf=25" -ac 1 -ar 22050 -ss 00:13:26.2 -t 6 -y me.wav
+```
+
+Once you WAV file is prepared, save it in the voices/ folder and update the `voice_to_speaker.yaml` file with the new file name.
+
+For example:
+
+```yaml
+...
+tts-1-hd:
+  me:
+    model: xtts_v2.0.2 # you can specify different xtts versions
+    speaker: voices/me.wav # this could be you
+```
