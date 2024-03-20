@@ -25,10 +25,10 @@ Details:
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
-Version: 0.7.2, 2024-03-20
+Version: 0.7.3, 2024-03-20
 
 * Allow different xtts versions per voice in `voice_to_speaker.yaml`, ex. xtts_v2.0.2
-* Quality: Fix xtts sample rate (24000 vs. 22050 for piper)
+* Quality: Fix xtts sample rate (24000 vs. 22050 for piper) and pops
 * use CUDA 12.2-base in Dockerfile
 
 API Documentation

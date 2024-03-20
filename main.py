@@ -71,9 +71,12 @@ class GenerateSpeechRequest(BaseModel):
     response_format: str = "mp3" # mp3, opus, aac, flac
     speed: float = 1.0 # 0.25 - 4.0
 
-def build_ffmpeg_args(sample_rate, response_format):
+def build_ffmpeg_args(response_format, input_format, sample_rate):
     # Convert the output to the desired format using ffmpeg
-    ffmpeg_args = ["ffmpeg", "-loglevel", "error", "-f", "s16le", "-ar", sample_rate, "-ac", "1", "-i", "-"]
+    if input_format == 'raw':
+        ffmpeg_args = ["ffmpeg", "-loglevel", "error", "-f", "s16le", "-ar", sample_rate, "-ac", "1", "-i", "-"]
+    else:
+        ffmpeg_args = ["ffmpeg", "-loglevel", "error", "-f", "WAV", "-i", "-"]
     
     if response_format == "mp3":
         ffmpeg_args.extend(["-f", "mp3", "-c:a", "libmp3lame", "-ab", "64k"])
@@ -123,7 +126,7 @@ async def generate_speech(request: GenerateSpeechRequest):
         tts_proc.stdin.write(bytearray(input_text.encode('utf-8')))
         tts_proc.stdin.close()
         tts_io_out = tts_proc.stdout
-        ffmpeg_args = build_ffmpeg_args("22050", response_format)
+        ffmpeg_args = build_ffmpeg_args(response_format, input_format="raw", sample_rate="22050")
 
     # Use xtts for tts-1-hd
     elif model == 'tts-1-hd':
@@ -138,8 +141,7 @@ async def generate_speech(request: GenerateSpeechRequest):
 
             xtts = xtts_wrapper(tts_model, device=args.xtts_device)
 
-        # input sample rate is 22050, output is 24000...
-        ffmpeg_args = build_ffmpeg_args("24000", response_format)
+        ffmpeg_args = build_ffmpeg_args(response_format, input_format="WAV", sample_rate="24000")
 
         # tts speed doesn't seem to work well
         if speed < 0.5:
