@@ -1,5 +1,5 @@
 fastapi
 uvicorn
 piper-tts
-TTS
 onnxruntime-gpu
+TTS

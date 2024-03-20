@@ -122,7 +122,7 @@ async def generate_speech(request: GenerateSpeechRequest):
 
     # Use xtts for tts-1-hd
     elif model == 'tts-1-hd':
-        tts_model, speaker = model, speaker = map_voice_to_speaker(voice, 'tts-1-hd')
+        tts_model, speaker = map_voice_to_speaker(voice, 'tts-1-hd')
 
         if not xtts or xtts.model_name != tts_model:
             xtts = xtts_wrapper(tts_model, device=args.xtts_device)
