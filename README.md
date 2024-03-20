@@ -110,13 +110,12 @@ client = openai.OpenAI(
   base_url = "http://localhost:8000/v1",
 )
 
-response = client.audio.speech.create(
+with client.audio.speech.with_streaming_response.create(
   model="tts-1",
   voice="alloy",
   input="Today is a wonderful day to build something people love!"
-)
-
-response.stream_to_file("speech.mp3")
+) as response:
+  response.stream_to_file("speech.mp3")
 ```
 
 Docker support
