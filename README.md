@@ -24,9 +24,11 @@ Details:
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
-Version: 0.6.0
+Version: 0.7.0
 
-Last update: 2023-11-27
+Last update: 2024-03-20
+
+* Allow different xtts versions per voice in `voice_to_speaker.yaml`, ex. xtts_v2.0.2
 
 API Documentation
 -----------------
