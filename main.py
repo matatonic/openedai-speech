@@ -130,8 +130,13 @@ async def generate_speech(request: GenerateSpeechRequest):
         tts_model, speaker = map_voice_to_speaker(voice, 'tts-1-hd')
 
         if not xtts or xtts.model_name != tts_model:
+            if xtts:
+                import torch, gc
+                del xtts
+                gc.collect()
+                torch.cuda.empty_cache()
+
             xtts = xtts_wrapper(tts_model, device=args.xtts_device)
-            # XXX probably should GC/torch cleanup here
 
         # input sample rate is 22050, output is 24000...
         ffmpeg_args = build_ffmpeg_args("24000", response_format)
