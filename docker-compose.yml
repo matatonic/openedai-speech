@@ -1,5 +1,5 @@
 services:
-  openedai-speech:
+  server:
     build:
       context: .
       dockerfile: Dockerfile # for tts-1-hd support via xtts_v2, ~4GB VRAM required, 13GB
