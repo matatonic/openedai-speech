@@ -26,7 +26,7 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 Version: 0.8.0, 2024-03-23
 
-* Pre-built docker images for :latest, :min and release versions
+* Cleanup, docs update.
 
 Version: 0.7.3, 2024-03-20
 
