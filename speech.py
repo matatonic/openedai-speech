@@ -12,9 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic import BaseModel
 
+import openedai
+
 xtts = None
 args = None
-app = FastAPI()
+app = openedai.OpenAIStub()
 
 class xtts_wrapper():
     def __init__(self, model_name, device):
@@ -49,20 +51,6 @@ def map_voice_to_speaker(voice: str, model: str):
     with open('voice_to_speaker.yaml', 'r') as file:
         voice_map = yaml.safe_load(file)
         return voice_map[model][voice]['model'], voice_map[model][voice]['speaker'], 
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
-)
-
-@app.get("/", response_class=PlainTextResponse)
-@app.head("/", response_class=PlainTextResponse)
-@app.options("/", response_class=PlainTextResponse)
-async def root():
-    return PlainTextResponse(content="")
 
 class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
@@ -162,7 +150,6 @@ async def generate_speech(request: GenerateSpeechRequest):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog='main.py',
         description='OpenedAI Speech API Server',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -179,5 +166,8 @@ if __name__ == "__main__":
 
     if args.preload:
         xtts = xtts_wrapper(args.preload, device=args.xtts_device)
+
+    app.register_model('tts-1')
+    app.register_model('tts-1-hd')
 
     uvicorn.run(app, host=args.host, port=args.port)

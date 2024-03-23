@@ -1,12 +1,12 @@
-version: "3.3"
 services:
   server:
     build:
       context: .
-      #dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required, ~900MB
       dockerfile: Dockerfile # for tts-1-hd support via xtts_v2, ~4GB VRAM required, 13GB
-    stdin_open: true
-    tty: true
+      #dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required, ~900MB
+    image: ghcr.io/matatonic/openedai-speech # :latest, :min, :<version>, :<version>-min
+    command: ["python", "speech.py", "--host", "0.0.0.0", "--port", "8000", "--preload", "xtts"]
+    #command: ["python", "speech.py", "--host", "0.0.0.0", "--port", "8000", "--xtts_device", "none"] # min
     ports:
       - "8000:8000"
 #    volumes:

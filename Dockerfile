@@ -1,11 +1,10 @@
-FROM nvidia/cuda:12.2.0-base-ubuntu22.04
+FROM ubuntu:22.04
 
 ENV COQUI_TOS_AGREED=1
 ENV PRELOAD_MODEL=xtts
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y ffmpeg curl python-is-python3 python3-pip && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get install --no-install-recommends -y ffmpeg curl python-is-python3 python3-pip
 
 #RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
@@ -19,4 +18,6 @@ RUN ./download_voices_tts-1.sh
 RUN ./download_voices_tts-1-hd.sh
 COPY *.py *.yaml *.md LICENSE /app/
 
-CMD python main.py --host 0.0.0.0 --port 8000 --preload $PRELOAD_MODEL
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+CMD python speech.py --host 0.0.0.0 --port 8000 --preload $PRELOAD_MODEL

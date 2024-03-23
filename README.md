@@ -5,8 +5,7 @@ An OpenAI API compatible text to speech server.
 
 * Compatible with the OpenAI audio/speech API
 * Serves the [/v1/audio/speech endpoint](https://platform.openai.com/docs/api-reference/audio/createSpeech)
-* Does not connect to the OpenAI API and does not require an OpenAI API Key
-* Not affiliated with OpenAI in any way
+* Not affiliated with OpenAI in any way, does not require an OpenAI API Key
 * A free, private, text-to-speech server with custom voice cloning
 
 Full Compatibility:
@@ -17,13 +16,17 @@ Full Compatibility:
 
 Details:
 * model 'tts-1' via [piper tts](https://github.com/rhasspy/piper) (fast, can use cpu)
-* model 'tts-1-hd' via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, uses almost 4GB GPU VRAM)
+* model 'tts-1-hd' via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, but requires around 4GB GPU VRAM)
 * Can be run without TTS/xtts_v2, entirely on cpu
-* Custom cloned voices can be used for tts-1-hd, just save a WAV file in `/voices/`
-* You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) and xtts_v2 speaker clones via `voice_to_speaker.yaml`
-* Sometimes certain words or symbols will sound bad, you can fix them with regex via `pre_process_map.yaml`
+* Custom cloned voices can be used for tts-1-hd, just save a WAV file in the `/voices/` directory
+* You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) and xtts_v2 speaker clones via the `voice_to_speaker.yaml` configuration file
+* Occasionally, certain words or symbols may sound incorrect, you can fix them with regex via `pre_process_map.yaml`
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
+
+Version: 0.8.0, 2024-03-23
+
+* Pre-built docker images for :latest, :min and release versions
 
 Version: 0.7.3, 2024-03-20
 
@@ -41,10 +44,17 @@ API Documentation
 Installation instructions
 -------------------------
 
+You can run the server via docker like so (**recommended**):
+```shell
+docker compose up
+```
+If you want a minimal docker image with piper support only (900MB vs. 13.5GB, see: Dockerfile.min). You can edit the `docker-compose.yml` to easily change this.
+
+Manual instructions:
 ```shell
 # Install the Python requirements
 pip install -r requirements.txt
-# install ffmpeg & curl
+# install ffmpeg and curl
 sudo apt install ffmpeg curl
 # Download the voice models:
 # for tts-1
@@ -57,8 +67,8 @@ Usage
 -----
 
 ```
-usage: main.py [-h] [--piper_cuda] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT]
-               [-H HOST]
+usage: speech.py [-h] [--piper_cuda] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT]
+                 [-H HOST]
 
 OpenedAI Speech API Server
 
@@ -118,21 +128,10 @@ with client.audio.speech.with_streaming_response.create(
   response.stream_to_file("speech.mp3")
 ```
 
-Docker support
---------------
-
-You can run the server via docker like so:
-```shell
-docker compose build
-docker compose up
-```
-
-If you want a minimal docker image with piper support only (900MB vs. 13GB, see: Dockerfile.min). You can edit the `docker-compose.yml` to change this.
-
 Custom Voices Howto
 -------------------
 
-Custom voices should be mono 22050 hz sample rate WAV files with low noise (no background music, etc.) and not contain any partial words. Sample voices for xtts should be at least 6 seconds, but can be longer, but longer doesn't always produce better results.
+Custom voices should be mono 22050 hz sample rate WAV files with low noise (no background music, etc.) and not contain any partial words.Sample voices for xtts should be at least 6 seconds long, but they can be longer. However, longer samples do not always produce better results.
 
 You can use FFmpeg to process your audio files and prepare them for xtts, here are some examples:
 
@@ -141,11 +140,11 @@ You can use FFmpeg to process your audio files and prepare them for xtts, here a
 ffmpeg -i input.mp3 -ac 1 -ar 22050 -t 6 -y me.wav
 # use a simple noise filter to clean up audio, and select a start time start for sampling.
 ffmpeg -i input.wav -af "highpass=f=200, lowpass=f=3000" -ac 1 -ar 22050 -ss 00:13:26.2 -t 6 -y me.wav
-# A more complex noise reduction setup with volume adjustment
+# A more complex noise reduction setup, including volume adjustment
 ffmpeg -i input.mkv -af "highpass=f=200, lowpass=f=3000, volume=5, afftdn=nf=25" -ac 1 -ar 22050 -ss 00:13:26.2 -t 6 -y me.wav
 ```
 
-Once you WAV file is prepared, save it in the voices/ folder and update the `voice_to_speaker.yaml` file with the new file name.
+Once your WAV file is prepared, save it in the `/voices/` directory and update the `voice_to_speaker.yaml` file with the new file name.
 
 For example:
 
