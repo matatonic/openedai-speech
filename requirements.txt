@@ -2,4 +2,21 @@ fastapi
 uvicorn
 piper-tts
 onnxruntime-gpu
-TTS
+#TTS
+
+torch==2.0.1 # this assumes your system is compatible with CUDA 11.7, otherwise checkout https://pytorch.org/get-started/previous-versions/#v201
+git+https://github.com/facebookresearch/audiocraft.git@c5157b5bf14bf83449c17ea1eeb66c19fb4bc7f0#egg=audiocraft
+apt-get install espeak-ng # backend for the phonemizer installed below
+#tensorboard==2.16.2
+phonemizer==3.2.1
+torchaudio==2.0.2
+#pip install datasets==2.16.0
+torchmetrics==0.11.1
+# install MFA for getting forced-alignment, this could take a few minutes
+montreal-forced-aligner=2.2.17
+openfst=1.8.2
+kaldi=5.5.1068
+# conda install pocl # above gives an warning for installing pocl, not sure if really need this
+
+# to run ipynb
+#ipykernel --update-deps --force-reinstall

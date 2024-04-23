@@ -1,10 +1,7 @@
 FROM ubuntu:22.04
 
-ENV COQUI_TOS_AGREED=1
-ENV PRELOAD_MODEL=xtts
-
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y ffmpeg curl python-is-python3 python3-pip
+    apt-get install --no-install-recommends -y ffmpeg curl python-is-python3 python3-pip espeak-ng
 
 #RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
