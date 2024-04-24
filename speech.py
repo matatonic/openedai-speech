@@ -150,11 +150,12 @@ async def generate_speech(request: GenerateSpeechRequest):
         if xtts is not None and xtts.model_name != tts_model:
             import torch, gc
             del xtts
+            xtts = None
             gc.collect()
             torch.cuda.empty_cache()
 
         if 'parler-tts' in tts_model and has_parler_tts:
-            if not xtts:
+            if xtts is None:
                 xtts = parler_tts(tts_model, device=args.xtts_device)
 
             ffmpeg_args = build_ffmpeg_args(response_format, input_format="WAV", sample_rate=str(xtts.model.config.sampling_rate))
@@ -165,7 +166,7 @@ async def generate_speech(request: GenerateSpeechRequest):
             tts_io_out = xtts.tts(text=input_text, description=speaker)
 
         else:
-            if not xtts:
+            if xtts is None:
                 xtts = xtts_wrapper(tts_model, device=args.xtts_device)
 
             ffmpeg_args = build_ffmpeg_args(response_format, input_format="WAV", sample_rate="24000")
