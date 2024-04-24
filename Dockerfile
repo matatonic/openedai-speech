@@ -1,10 +1,11 @@
-FROM ubuntu:22.04
+FROM python:3.11-slim
 
 ENV COQUI_TOS_AGREED=1
 ENV PRELOAD_MODEL=xtts
+# or PRELOAD_MODEL=parler-tts/parler_tts_mini_v0.1
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y ffmpeg curl python-is-python3 python3-pip
+    apt-get install --no-install-recommends -y curl git ffmpeg
 
 #RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
@@ -12,7 +13,7 @@ RUN mkdir -p /app/voices
 COPY voices/alloy-alt.wav /app/voices/
 WORKDIR /app
 COPY *.txt /app/
-RUN pip install -r requirements.txt
+RUN pip install --no-cache -r requirements.txt
 COPY *.sh /app/
 RUN ./download_voices_tts-1.sh
 RUN ./download_voices_tts-1-hd.sh

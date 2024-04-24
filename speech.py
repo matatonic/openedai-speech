@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
-from pathlib import Path
 import argparse
 import os
 import re
 import subprocess
 import tempfile
 import yaml
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, PlainTextResponse
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import uvicorn
 from pydantic import BaseModel
+
+# for parler
+try:
+    from parler_tts import ParlerTTSForConditionalGeneration
+    from transformers import AutoTokenizer, logging
+    import torch
+    import soundfile as sf
+    logging.set_verbosity_error()
+    has_parler_tts = True
+except ImportError:
+    print("No parler support found")
+    has_parler_tts = False
 
 import openedai
 
@@ -20,7 +29,6 @@ app = openedai.OpenAIStub()
 
 class xtts_wrapper():
     def __init__(self, model_name, device):
-        global args
         self.model_name = model_name
         self.xtts = TTS(model_name=model_name, progress_bar=False).to(device)
 
@@ -38,9 +46,28 @@ class xtts_wrapper():
         os.unlink(file_path)
         return tf
 
+class parler_tts():
+    def __init__(self, model_name, device):
+        self.model_name = model_name
+        self.model = ParlerTTSForConditionalGeneration.from_pretrained(model_name).to(device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    def tts(self, text, description):
+        input_ids = self.tokenizer(description, return_tensors="pt").input_ids.to(self.model.device)
+        prompt_input_ids = self.tokenizer(text, return_tensors="pt").input_ids.to(self.model.device)
+
+        generation = self.model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
+        audio_arr = generation.cpu().numpy().squeeze()
+        
+        tf, file_path = tempfile.mkstemp(suffix='.wav')
+        sf.write(file_path, audio_arr, self.model.config.sampling_rate)
+        os.unlink(file_path)
+        return tf
+
+
 # Read pre process map on demand so it can be changed without restarting the server
 def preprocess(raw_input):
-    with open('pre_process_map.yaml', 'r') as file:
+    with open('pre_process_map.yaml', 'r', encoding='utf8') as file:
         pre_process_map = yaml.safe_load(file)
         for a, b in pre_process_map:
             raw_input = re.sub(a, b, raw_input)
@@ -48,7 +75,7 @@ def preprocess(raw_input):
 
 # Read voice map on demand so it can be changed without restarting the server
 def map_voice_to_speaker(voice: str, model: str):
-    with open('voice_to_speaker.yaml', 'r') as file:
+    with open('voice_to_speaker.yaml', 'r', encoding='utf8') as file:
         voice_map = yaml.safe_load(file)
         return voice_map[model][voice]['model'], voice_map[model][voice]['speaker'], 
 
@@ -120,26 +147,38 @@ async def generate_speech(request: GenerateSpeechRequest):
     elif model == 'tts-1-hd':
         tts_model, speaker = map_voice_to_speaker(voice, 'tts-1-hd')
 
-        if not xtts or xtts.model_name != tts_model:
-            if xtts:
-                import torch, gc
-                del xtts
-                gc.collect()
-                torch.cuda.empty_cache()
+        if xtts is not None and xtts.model_name != tts_model:
+            import torch, gc
+            del xtts
+            gc.collect()
+            torch.cuda.empty_cache()
 
-            xtts = xtts_wrapper(tts_model, device=args.xtts_device)
+        if 'parler-tts' in tts_model and has_parler_tts:
+            if not xtts:
+                xtts = parler_tts(tts_model, device=args.xtts_device)
 
-        ffmpeg_args = build_ffmpeg_args(response_format, input_format="WAV", sample_rate="24000")
+            ffmpeg_args = build_ffmpeg_args(response_format, input_format="WAV", sample_rate=str(xtts.model.config.sampling_rate))
 
-        # tts speed doesn't seem to work well
-        if speed < 0.5:
-            speed = speed / 0.5
-            ffmpeg_args.extend(["-af", "atempo=0.5"]) 
-        if speed > 1.0:
-            ffmpeg_args.extend(["-af", f"atempo={speed}"]) 
-            speed = 1.0
+            if speed != 1:
+                ffmpeg_args.extend(["-af", f"atempo={speed}"]) 
 
-        tts_io_out = xtts.tts(text=input_text, speaker_wav=speaker, speed=speed)
+            tts_io_out = xtts.tts(text=input_text, description=speaker)
+
+        else:
+            if not xtts:
+                xtts = xtts_wrapper(tts_model, device=args.xtts_device)
+
+            ffmpeg_args = build_ffmpeg_args(response_format, input_format="WAV", sample_rate="24000")
+
+            # tts speed doesn't seem to work well
+            if speed < 0.5:
+                speed = speed / 0.5
+                ffmpeg_args.extend(["-af", "atempo=0.5"]) 
+            if speed > 1.0:
+                ffmpeg_args.extend(["-af", f"atempo={speed}"]) 
+                speed = 1.0
+
+            tts_io_out = xtts.tts(text=input_text, speaker_wav=speaker, speed=speed)
 
     # Pipe the output from piper/xtts to the input of ffmpeg
     ffmpeg_args.extend(["-"])
@@ -165,7 +204,10 @@ if __name__ == "__main__":
         from TTS.api import TTS
 
     if args.preload:
-        xtts = xtts_wrapper(args.preload, device=args.xtts_device)
+        if 'parler-tts' in args.preload:
+            xtts = parler_tts(args.preload, device=args.xtts_device)
+        else:
+            xtts = xtts_wrapper(args.preload, device=args.xtts_device)
 
     app.register_model('tts-1')
     app.register_model('tts-1-hd')

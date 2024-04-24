@@ -24,6 +24,16 @@ Details:
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
+
+Version: 0.9.0, 2024-04-23
+
+* Fix bug with yaml and loading UTF-8
+* New sample text-to-speech application `say.py`
+* Smaller docker base image
+* Add beta [parler-tts](https://huggingface.co/parler-tts/parler_tts_mini_v0.1) support (you can describe very basic features of the speaker voice), See: (https://www.text-description-to-speech.com/) for some examples of how to describe voices. Voices can be defined in the `voice_to_speaker.yaml`.
+* 2 example [parler-tts](https://huggingface.co/parler-tts/parler_tts_mini_v0.1) voices are included in the `voice_to_speaker.yaml` file.
+* parler-tts is experimental software and is kind of slow. The exact voice will be slightly different each generation but should be similar to the basic description.
+
 Version: 0.8.0, 2024-03-23
 
 * Cleanup, docs update.
@@ -127,6 +137,14 @@ with client.audio.speech.with_streaming_response.create(
 ) as response:
   response.stream_to_file("speech.mp3")
 ```
+
+Also see the `say.py` sample application for an example of how to use the openai-python API.
+
+```
+$ python say.py -i "The quick brown fox jumped over the lazy dog." -p # play the audio, requires 'pip install playsound'
+$ python say.py -i "The quick brown fox jumped over the lazy dog." -m tts-1-hd -v onyx -f flac -o fox.flac # save to a file.
+```
+
 
 Custom Voices Howto
 -------------------

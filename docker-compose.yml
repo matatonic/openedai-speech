@@ -2,8 +2,9 @@ services:
   server:
     build:
       context: .
-      dockerfile: Dockerfile # for tts-1-hd support via xtts_v2, ~4GB VRAM required, 13GB
-      #dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required, ~900MB
+      dockerfile: Dockerfile # for tts-1-hd support via xtts_v2, ~4GB VRAM required, ~10GB
+      #dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required, ~1GB
+    #command: ["python", "speech.py", "--host", "0.0.0.0", "--port", "8000",  "--preload", "parler-tts/parler_tts_mini_v0.1"]
     command: ["python", "speech.py", "--host", "0.0.0.0", "--port", "8000", "--preload", "xtts"]
     #command: ["python", "speech.py", "--host", "0.0.0.0", "--port", "8000", "--xtts_device", "none"] # min
     ports:

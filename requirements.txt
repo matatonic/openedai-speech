@@ -1,5 +1,9 @@
 fastapi
 uvicorn
+# piper-tts
 piper-tts
 onnxruntime-gpu
+# xtts
 TTS
+# parler-tts
+git+https://github.com/huggingface/parler-tts.git
