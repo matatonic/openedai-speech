@@ -1,4 +1,9 @@
 #!/bin/sh
 export COQUI_TOS_AGREED=1
-python -c "from TTS.utils.manage import ModelManager; ModelManager().download_model('$PRELOAD_MODEL')"
+export TTS_HOME=voices
+
+MODELS=${*:-xtts}
+for model in $MODELS; do
+	python -c "from TTS.utils.manage import ModelManager; ModelManager().download_model('$model')"
+done
 ./download_samples.sh

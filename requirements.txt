@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 # piper-tts
-piper-tts
+piper-tts==1.2.0
 onnxruntime-gpu
 # xtts
 TTS

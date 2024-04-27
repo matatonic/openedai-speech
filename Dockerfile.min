@@ -3,15 +3,13 @@ FROM python:3.11-slim
 RUN apt-get update && \
     apt-get install --no-install-recommends -y ffmpeg curl
 
-RUN pip install --no-cache piper-tts pyyaml fastapi uvicorn
+RUN pip install --no-cache piper-tts==1.2.0 pyyaml fastapi uvicorn
 
-#RUN git clone https://github.com/matatonic/openedai-speech /app
 RUN mkdir -p /app/voices
 COPY *.py *.yaml *.txt *.md *.sh LICENSE /app/
 WORKDIR /app
 
-RUN ./download_voices_tts-1.sh
-
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-CMD python speech.py --host 0.0.0.0 --port 8000 --xtts_device none
+ENV CLI_COMMAND="python speech.py --xtts_device none"
+CMD $CLI_COMMAND

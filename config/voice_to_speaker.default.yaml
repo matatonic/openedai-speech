@@ -2,7 +2,7 @@
   some_other_voice_name_you_want:
     model: voices/choose your own model.onnx
     speaker: set your own speaker
-  alloy: 
+  alloy:
     model: voices/en_US-libritts_r-medium.onnx
     speaker: 79 # 64, 79, 80, 101, 130
   echo:
@@ -24,7 +24,7 @@
     model: voices/en_US-libritts_r-medium.onnx
     speaker: 163
 tts-1-hd:
-  alloy: 
+  alloy:
     model: xtts
     speaker: voices/alloy-alt.wav
   alloy-orig: 

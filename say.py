@@ -2,6 +2,7 @@
 
 import sys
 import os
+import atexit
 import tempfile
 import argparse
 
@@ -20,19 +21,23 @@ import openai
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model", type=str, default="tts-1")#, choices=["tts-1", "tts-1-hd"])
-    parser.add_argument("-v", "--voice", type=str, default="alloy")#, choices=["alloy", "echo", "fable", "onyx", "nova", "shimmer"])
-    parser.add_argument("-f", "--format", type=str, default="mp3", choices=["mp3", "aac", "opus", "flac"])
-    parser.add_argument("-s", "--speed", type=float, default=1.0)
-    parser.add_argument("-i", "--input", type=str)
+    parser = argparse.ArgumentParser(
+        description='Text to speech using the OpenAI API',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("-m", "--model", type=str, default="tts-1", help="The model to use")#, choices=["tts-1", "tts-1-hd"])
+    parser.add_argument("-v", "--voice", type=str, default="alloy", help="The voice of the speaker")#, choices=["alloy", "echo", "fable", "onyx", "nova", "shimmer"])
+    parser.add_argument("-f", "--format", type=str, default="mp3", choices=["mp3", "aac", "opus", "flac"], help="The output audio format")
+    parser.add_argument("-s", "--speed", type=float, default=1.0, help="playback speed, 0.25-4.0")
+    parser.add_argument("-t", "--text", type=str, default=None, help="Provide text to read on the command line")
+    parser.add_argument("-i", "--input", type=str, default=None, help="Read text from a file (default is to read from stdin)")
     
     if playsound is None:
-        parser.add_argument("-o", "--output", type=str) # required
+        parser.add_argument("-o", "--output", type=str, help="The filename to save the output to") # required
         parser.add_argument("-p", "--playsound", type=None, default=None, help="python playsound not found. pip install playsound")
     else:
-        parser.add_argument("-o", "--output", type=str, default=None) # not required
-        parser.add_argument("-p", "--playsound", action="store_true")
+        parser.add_argument("-o", "--output", type=str, default=None, help="The filename to save the output to") # not required
+        parser.add_argument("-p", "--playsound", action="store_true", help="Play the audio")
 
     args = parser.parse_args(argv)
 
@@ -50,6 +55,17 @@ if __name__ == "__main__":
         print("Must select one of playsound (-p) or output file name (-o)")
         sys.exit(1)
 
+    if args.input is None and args.text is None:
+        text = sys.stdin.read()
+    elif args.text:
+        text = args.text
+    elif args.input:
+        if os.path.exists(args.input):
+            with open(args.input, 'r') as f:
+                text = f.read()
+        else:
+            print(f"Warning! File not found: {args.input}\nFalling back to old behavior for -i")
+            text = args.input
 
     client = openai.OpenAI(
         # This part is not needed if you set these environment variables before import openai
@@ -60,21 +76,21 @@ if __name__ == "__main__":
     )
 
     if args.playsound and args.output is None:
-        tf, args.output = file_path = tempfile.mkstemp(suffix='.wav')
-    else:
-        tf = None
+        _, args.output = tempfile.mkstemp(suffix='.wav')
+        
+        def cleanup():
+            os.unlink(args.output)
+
+        atexit.register(cleanup)
 
     with client.audio.speech.with_streaming_response.create(
         model=args.model,
         voice=args.voice,
         speed=args.speed,
         response_format=args.format,
-        input=args.input,
+        input=text,
     ) as response:
         response.stream_to_file(args.output)
 
-    if args.playsound:
-        playsound(args.output)
-    
-    if tf:
-        os.unlink(args.output)
+        if args.playsound:
+            playsound(args.output)

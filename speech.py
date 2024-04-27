@@ -65,9 +65,18 @@ class parler_tts():
         return tf
 
 
+def default_exists(filename: str):
+    if not os.path.exists(filename):
+        basename, ext = os.path.splitext(filename)
+        default = f"{basename}.default{ext}"
+        with open(default, 'r') as from_file:
+            with open(filename, 'w') as to_file:
+                to_file.write(from_file.read())
+
 # Read pre process map on demand so it can be changed without restarting the server
 def preprocess(raw_input):
-    with open('pre_process_map.yaml', 'r', encoding='utf8') as file:
+    default_exists('config/pre_process_map.yaml')
+    with open('config/pre_process_map.yaml', 'r', encoding='utf8') as file:
         pre_process_map = yaml.safe_load(file)
         for a, b in pre_process_map:
             raw_input = re.sub(a, b, raw_input)
@@ -75,9 +84,10 @@ def preprocess(raw_input):
 
 # Read voice map on demand so it can be changed without restarting the server
 def map_voice_to_speaker(voice: str, model: str):
-    with open('voice_to_speaker.yaml', 'r', encoding='utf8') as file:
+    default_exists('config/voice_to_speaker.yaml')
+    with open('config/voice_to_speaker.yaml', 'r', encoding='utf8') as file:
         voice_map = yaml.safe_load(file)
-        return voice_map[model][voice]['model'], voice_map[model][voice]['speaker'], 
+        return (voice_map[model][voice]['model'], voice_map[model][voice]['speaker'])
 
 class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
@@ -197,7 +207,7 @@ if __name__ == "__main__":
     parser.add_argument('--xtts_device', action='store', default="cuda", help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
     parser.add_argument('--preload', action='store', default=None, help="Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use.")
     parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")
-    parser.add_argument('-H', '--host', action='store', default='localhost', help="Host to listen on, Ex. 0.0.0.0")
+    parser.add_argument('-H', '--host', action='store', default='0.0.0.0', help="Host to listen on, Ex. 0.0.0.0")
 
     args = parser.parse_args()
 
