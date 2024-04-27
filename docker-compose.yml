@@ -1,7 +1,7 @@
 services:
   server:
     build:
-      dockerfile: Dockerfile # for tts-1-hd support via xtts_v2, ~4GB VRAM required, ~10GB
+      dockerfile: Dockerfile # for tts-1-hd support via xtts_v2, ~4GB VRAM required, ~8GB
       #dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required, ~1GB
     image: ghcr.io/matatonic/openedai-speech
     #image: ghcr.io/matatonic/openedai-speech-min
@@ -11,7 +11,8 @@ services:
     volumes:
       - ./voices:/app/voices
       - ./config:/app/config
-    #restart: unless-stopped # install as a service
+    # install as a service, run with docker compose up -d
+    #restart: unless-stopped
     # Below can be removed if not using GPU
     runtime: nvidia
     deploy:
