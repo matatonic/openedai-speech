@@ -25,9 +25,9 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
-Version: 0.10.0, 2024-04-26
+Version: 0.10.0, 2024-04-27
 
-* Prebuilt & tested docker images, smaller docker images (8GB or 860MB)
+* Pre-built & tested docker images, smaller docker images (8GB or 860MB)
 * Better upgrades: reorganize config files under `config/`, voice models under `voices/`
 * **Compatibility!** If you customized your `voice_to_speaker.yaml` or `pre_process_map.yaml` you need to move them to the `config/` folder.
 * default listen host to 0.0.0.0
