@@ -13,8 +13,8 @@ services:
       - ./config:/app/config
     # install as a service, run with docker compose up -d
     #restart: unless-stopped
-    # Below can be removed if not using GPU
-    runtime: nvidia
+    # Set nvidia runtime if it's not the default or not using GPU
+    #runtime: nvidia
     deploy:
       resources:
         reservations:

@@ -25,6 +25,10 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version: 0.10.1, 2024-05-05
+
+* Remove `runtime: nvidia` from docker-compose.yml, this assumes nvidia/cuda compatible runtime is available by default. thanks @jmtatsch
+
 Version: 0.10.0, 2024-04-27
 
 * Pre-built & tested docker images, smaller docker images (8GB or 860MB)

@@ -8,7 +8,7 @@ RUN apt-get update && \
 RUN mkdir -p /app/voices
 WORKDIR /app
 COPY *.txt /app/
-RUN pip install --no-cache -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 COPY *.sh *.py *.yaml *.md LICENSE config /app/
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
