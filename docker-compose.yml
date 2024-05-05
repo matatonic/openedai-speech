@@ -14,7 +14,6 @@ services:
     # install as a service, run with docker compose up -d
     #restart: unless-stopped
     # Below can be removed if not using GPU
-    runtime: nvidia
     deploy:
       resources:
         reservations:
