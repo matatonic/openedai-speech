@@ -11,10 +11,11 @@ services:
     volumes:
       - ./voices:/app/voices
       - ./config:/app/config
-    # install as a service, run with docker compose up -d
+    # To install as a service
     #restart: unless-stopped
-    # Set nvidia runtime if it's not the default or not using GPU
+    # Set nvidia runtime if it's not the default
     #runtime: nvidia
+    # The deploy section can be removed it not using GPU
     deploy:
       resources:
         reservations:
