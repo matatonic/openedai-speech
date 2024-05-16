@@ -18,4 +18,8 @@ RUN chmod +x /app/init.sh && \
 
 RUN pip install -r requirements.txt
 
-CMD ["/bin/bash", "-c", "/app/init.sh && python speech.py"]
+ENV TTS_HOME=voices
+ENV HF_HOME=voices
+ARG PRELOAD_MODEL
+
+CMD ["/bin/bash", "-c", "/app/init.sh && python speech.py ${PRELOAD_MODEL:+--preload $PRELOAD_MODEL}"]

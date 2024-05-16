@@ -16,4 +16,8 @@ RUN chmod +x /app/init.sh && \
     chmod +x /app/download_voices_tts-1.sh && \
     chmod +x /app/download_voices_tts-1-hd.sh
 
-CMD ["/bin/bash", "-c", "/app/init.sh && python speech.py --xtts_device none"]
+ENV TTS_HOME=voices
+ENV HF_HOME=voices
+ARG PRELOAD_MODEL
+
+CMD ["/bin/bash", "-c", "/app/init.sh && python speech.py --xtts_device none ${PRELOAD_MODEL:+--preload $PRELOAD_MODEL}"]
