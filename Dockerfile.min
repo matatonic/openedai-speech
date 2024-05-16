@@ -1,15 +1,19 @@
 FROM python:3.11-slim
 
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y ffmpeg curl
-
 RUN pip install --no-cache piper-tts==1.2.0 pyyaml fastapi uvicorn
 
-RUN mkdir -p /app/voices
-COPY *.py *.yaml *.txt *.md *.sh LICENSE /app/
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y curl ffmpeg && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
+RUN mkdir -p voices config
 
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+COPY *.py *.yaml *.txt *.md *.sh LICENSE /app/
+COPY config/* /app/config/
 
-ENV CLI_COMMAND="python speech.py --xtts_device none"
-CMD $CLI_COMMAND
+RUN chmod +x /app/init.sh && \
+    chmod +x /app/download_voices_tts-1.sh && \
+    chmod +x /app/download_voices_tts-1-hd.sh
+
+CMD ["/bin/bash", "-c", "/app/init.sh && python speech.py --xtts_device none"]
