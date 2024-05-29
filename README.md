@@ -14,16 +14,25 @@ Full Compatibility:
 * speed 0.25-4.0 (and more)
 
 Details:
-* model 'tts-1' via [piper tts](https://github.com/rhasspy/piper) (fast, can use cpu)
-* model 'tts-1-hd' via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, but requires around 4GB GPU VRAM)
-* Can be run without TTS/xtts_v2, entirely on cpu
-* Custom cloned voices can be used for tts-1-hd, just save a WAV file in the `/voices/` directory
-* You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) and xtts_v2 speaker clones via the `voice_to_speaker.yaml` configuration file
+* Model `tts-1` via [piper tts](https://github.com/rhasspy/piper) (very fast, runs on cpu)
+  * You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) via the `voice_to_speaker.yaml` configuration file
+* Model `tts-1-hd` via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, but requires around 4GB GPU VRAM)
+  * Custom cloned voices can be used for tts-1-hd, See: [Custom Voices Howto](#custom-voices-howto)
+  * 🌐 [Multilingual](#multilingual) support with XTTS voices
 * Occasionally, certain words or symbols may sound incorrect, you can fix them with regex via `pre_process_map.yaml`
+
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
 ## Recent Changes
+
+Version 0.11.0, 2024-05-29
+
+* 🌐 [Multilingual](#multilingual) support (16 languages) with XTTS
+* Remove high Unicode filtering from the default `config/pre_process_map.yaml`
+* Update Docker build & app startup. thanks @justinh-rahb
+* Fix: "Plan failed with a cudnnException"
+* Remove piper cuda support
 
 Version: 0.10.1, 2024-05-05
 
@@ -53,59 +62,45 @@ Version: 0.7.3, 2024-03-20
 
 ## Installation instructions
 
-1) Download the models & voices
-```shell
-# for tts-1 / piper
-bash download_voices_tts-1.sh
-# and for tts-1-hd / xtts
-bash download_voices_tts-1-hd.sh
+1) Copy the `sample.env` to `speech.env` (customize if needed)
+```bash
+cp sample.env speech.env
 ```
 
-If you have different models which you want to use, both of the download scripts accept arguments for which models to download.
+2. Option: Docker (**recommended**) (prebuilt images are available)
 
-Example:
+Run the server:
 ```shell
-# Download en_US-ryan-high too
-bash download_voices_tts-1.sh en_US-libritts_r-medium en_GB-northern_english_male-medium en_US-ryan-high
-# Download xtts (latest) and xtts_v2.0.2
-bash download_voices_tts-1-hd.sh xtts xtts_v2.0.2
-```
-
-
-2a) Option 1: Docker (**recommended**) (prebuilt images are available)
-
-You can run the server via docker like so:
-```shell
-cp sample.env speech.env # edit to suit your environment as needed, you can preload a model on startup
 docker compose up
 ```
-If you want a minimal docker image with piper support only (<1GB vs. 8GB, see: Dockerfile.min). You can edit the `docker-compose.yml` to easily change this.
-To install the docker image as a service, edit the `docker-compose.yml` and uncomment `restart: unless-stopped`, then start the service with: `docker compose up -d`.
+For a minimal docker image with only piper support (<1GB vs. 8GB), use `docker compose -f docker-compose.min.yml up`
+
+To install the docker image as a service, edit the `docker-compose.yml` and uncomment `restart: unless-stopped`, then start the service with: `docker compose up -d`
 
 
-2b) Option 2: Manual instructions:
+2. Option: Manual installation:
 ```shell
-# install ffmpeg and curl
-sudo apt install ffmpeg curl
-# Create & activate a new virtual environment
+# install curl and ffmpeg
+sudo apt install curl ffmpeg
+# Create & activate a new virtual environment (optional but recommended)
 python -m venv .venv
 source .venv/bin/activate
 # Install the Python requirements
 pip install -r requirements.txt
 # run the server
-python speech.py
+startup.sh
 ```
+
 
 ## Usage
 
 ```
-usage: speech.py [-h] [--piper_cuda] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT] [-H HOST]
+usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT] [-H HOST]
 
 OpenedAI Speech API Server
 
 options:
   -h, --help            show this help message and exit
-  --piper_cuda          Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me, but cpu is fast enough (default: False)
   --xtts_device XTTS_DEVICE
                         Set the device for the xtts model. The special value of 'none' will use piper for all models. (default: cuda)
   --preload PRELOAD     Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use. (default: None)
@@ -194,9 +189,34 @@ options:
 
 ## Custom Voices Howto
 
-Custom voices should be mono 22050 hz sample rate WAV files with low noise (no background music, etc.) and not contain any partial words.Sample voices for xtts should be at least 6 seconds long, but they can be longer. However, longer samples do not always produce better results.
+### Piper
 
-You can use FFmpeg to process your audio files and prepare them for xtts, here are some examples:
+  1. Select the piper voice and model from the [piper samples](https://rhasspy.github.io/piper-samples/)
+  2. Update the `config/voice_to_speaker.yaml` with a new section for the voice, for example:
+```yaml
+...
+tts-1:
+  ryan:
+    model: voices/en_US-ryan-high.onnx
+    speaker: # default speaker
+```
+  3. New models will be downloaded as needed, of you can download them in advance with `download_voices_tts-1.sh`. For example:
+```shell
+bash download_voices_tts-1.sh en_US-ryan-high
+```
+
+### Coqui XTTS v2
+
+Coqui XTTS v2 voice cloning can work with as little as 6 seconds of clear audio. To create a custom voice clone, you must prepare a WAV file sample of the voice.
+
+#### Guidelines for preparing good sample files for Coqui XTTS v2
+* Mono (single channel) 22050 Hz WAV file
+* 6-30 seconds long - longer isn't always better (I've had some good results with as little as 4 seconds)
+* low noise (no hiss or hum)
+* No partial words, breathing, music or backgrounds sounds
+* An even speaking pace with a variety of words is best, like in interviews or audiobooks.
+
+You can use FFmpeg to prepare your audio files, here are some examples:
 
 ```shell
 # convert a multi-channel audio file to mono, set sample rate to 22050 hz, trim to 6 seconds, and output as WAV file.
@@ -207,7 +227,7 @@ ffmpeg -i input.wav -af "highpass=f=200, lowpass=f=3000" -ac 1 -ar 22050 -ss 00:
 ffmpeg -i input.mkv -af "highpass=f=200, lowpass=f=3000, volume=5, afftdn=nf=25" -ac 1 -ar 22050 -ss 00:13:26.2 -t 6 -y me.wav
 ```
 
-Once your WAV file is prepared, save it in the `/voices/` directory and update the `voice_to_speaker.yaml` file with the new file name.
+Once your WAV file is prepared, save it in the `/voices/` directory and update the `config/voice_to_speaker.yaml` file with the new file name.
 
 For example:
 
@@ -218,3 +238,33 @@ tts-1-hd:
     model: xtts_v2.0.2 # you can specify different xtts versions
     speaker: voices/me.wav # this could be you
 ```
+
+## Multilingual
+
+Multilingual support was added in version 0.11.0 and is available only with the XTTS v2 model.
+
+Coqui XTTSv2 has support for 16 languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Italian (`it`), Portuguese (`pt`), Polish (`pl`), Turkish (`tr`), Russian (`ru`), Dutch (`nl`), Czech (`cs`), Arabic (`ar`), Chinese (`zh-cn`), Japanese (`ja`), Hungarian (`hu`) and Korean (`ko`).
+
+Unfortunately the OpenAI API does not support language, but you can create your own custom speaker voice and set the language for that.
+
+1) Create the WAV file for your speaker, as in [Custom Voices Howto](#custom-voices-howto)
+2) Add the voice to `config/voice_to_speaker.yaml` and include the correct Coqui `language` code for the speaker. For example:
+
+```yaml
+  xunjiang:
+    model: xtts
+    speaker: voices/xunjiang.wav
+    language: zh-cn
+```
+
+3) Don't remove high unicode characters in your `config/pre_process_map.yaml`! If you have these lines, you will need to remove them. For example:
+
+Remove:
+```yaml
+- - '[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]+'
+  - ''
+```
+
+These lines were added to the `config/pre_process_map.yaml` config file by default before version 0.11.0:
+
+4) Your new multi-lingual speaker voice is ready to use!

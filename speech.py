@@ -32,12 +32,12 @@ class xtts_wrapper():
         self.model_name = model_name
         self.xtts = TTS(model_name=model_name, progress_bar=False).to(device)
 
-    def tts(self, text, speaker_wav, speed):
+    def tts(self, text, speaker_wav, speed, language):
         tf, file_path = tempfile.mkstemp(suffix='.wav')
 
         file_path = self.xtts.tts_to_file(
-            text,
-            language='en',
+            text=text,
+            language=language,
             speaker_wav=speaker_wav,
             speed=speed,
             file_path=file_path,
@@ -87,7 +87,7 @@ def map_voice_to_speaker(voice: str, model: str):
     default_exists('config/voice_to_speaker.yaml')
     with open('config/voice_to_speaker.yaml', 'r', encoding='utf8') as file:
         voice_map = yaml.safe_load(file)
-        return (voice_map[model][voice]['model'], voice_map[model][voice]['speaker'])
+        return (voice_map[model][voice]['model'], voice_map[model][voice]['speaker'], voice_map[model][voice].get('language', 'en'))
 
 class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
@@ -138,10 +138,8 @@ async def generate_speech(request: GenerateSpeechRequest):
 
     # Use piper for tts-1, and if xtts_device == none use for all models.
     if model == 'tts-1' or args.xtts_device == 'none':
-        piper_model, speaker = map_voice_to_speaker(voice, 'tts-1')
+        piper_model, speaker, not_used_language = map_voice_to_speaker(voice, 'tts-1')
         tts_args = ["piper", "--model", str(piper_model), "--data-dir", "voices", "--download-dir", "voices", "--output-raw"]
-        if args.piper_cuda:
-            tts_args.extend(["--cuda"])
         if speaker:
             tts_args.extend(["--speaker", str(speaker)])
         if speed != 1.0:
@@ -155,7 +153,7 @@ async def generate_speech(request: GenerateSpeechRequest):
 
     # Use xtts for tts-1-hd
     elif model == 'tts-1-hd':
-        tts_model, speaker = map_voice_to_speaker(voice, 'tts-1-hd')
+        tts_model, speaker, language = map_voice_to_speaker(voice, 'tts-1-hd')
 
         if xtts is not None and xtts.model_name != tts_model:
             import torch, gc
@@ -189,7 +187,7 @@ async def generate_speech(request: GenerateSpeechRequest):
                 ffmpeg_args.extend(["-af", f"atempo={speed}"]) 
                 speed = 1.0
 
-            tts_io_out = xtts.tts(text=input_text, speaker_wav=speaker, speed=speed)
+            tts_io_out = xtts.tts(text=input_text, speaker_wav=speaker, speed=speed, language=language)
 
     # Pipe the output from piper/xtts to the input of ffmpeg
     ffmpeg_args.extend(["-"])
@@ -203,7 +201,6 @@ if __name__ == "__main__":
         description='OpenedAI Speech API Server',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--piper_cuda', action='store_true', default=False, help="Enable cuda for piper. Note: --cuda/onnxruntime-gpu is not working for me, but cpu is fast enough") 
     parser.add_argument('--xtts_device', action='store', default="cuda", help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
     parser.add_argument('--preload', action='store', default=None, help="Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use.")
     parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")

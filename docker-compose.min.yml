@@ -1,0 +1,13 @@
+services:
+  server:
+    build:
+      dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required, ~1GB
+    image: ghcr.io/matatonic/openedai-speech-min
+    env_file: speech.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./voices:/app/voices
+      - ./config:/app/config
+    # To install as a service
+    #restart: unless-stopped

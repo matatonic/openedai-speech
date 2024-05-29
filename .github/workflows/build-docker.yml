@@ -77,7 +77,7 @@ jobs:
     env:
       # Set up environment variables for the job
       DOCKER_REGISTRY: ghcr.io
-      IMAGE_NAME: matatonic/openedai-speech-min
+      IMAGE_NAME: ${{ github.repository }}-min
       TAG: ${{ github.sha }}
 
     steps:

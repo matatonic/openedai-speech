@@ -2,9 +2,11 @@ fastapi
 uvicorn
 # piper-tts
 piper-tts==1.2.0
-onnxruntime-gpu
 # xtts
 TTS
+# Fixes: https://github.com/matatonic/openedai-speech/issues/9
+# Re:  https://github.com/pytorch/pytorch/issues/121834
+torch==2.2.2
 # XXX, 3.8+ has some issue for now
 spacy==3.7.4
 # parler-tts
