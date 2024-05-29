@@ -88,7 +88,7 @@ source .venv/bin/activate
 # Install the Python requirements
 pip install -r requirements.txt
 # run the server
-startup.sh
+bash startup.sh
 ```
 
 
