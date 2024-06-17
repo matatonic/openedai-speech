@@ -7,7 +7,7 @@ RUN apt-get update && \
 WORKDIR /app
 RUN mkdir -p voices config
 
-RUN --mount=type=cache,target=/root/.cache/pip pip install piper-tts==1.2.0 pyyaml fastapi uvicorn
+RUN --mount=type=cache,target=/root/.cache/pip pip install piper-tts==1.2.0 pyyaml fastapi uvicorn loguru numpy\<2
 
 
 COPY speech.py openedai.py say.py *.sh README.md LICENSE /app/
