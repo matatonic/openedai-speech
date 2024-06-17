@@ -102,7 +102,9 @@ class OpenAIStub(FastAPI):
 
         @self.exception_handler(APIStatusError)
         def openai_statuserror_handler(request: Request, exc: APIStatusError) -> JSONResponse:
-            # User error
+            # Client side error
+            logger.info(repr(exc))
+
             if exc.internal_message:
                 logger.info(exc.internal_message)
 

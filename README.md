@@ -26,6 +26,10 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version 0.12.3, 2024-06-17
+
+* Additional logging details for BadRequests (400)
+
 Version 0.12.2, 2024-06-16
 
 * Fix :min image requirements (numpy<2?)
