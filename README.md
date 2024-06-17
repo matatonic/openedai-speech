@@ -26,6 +26,11 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version 0.12.0, 2024-06-16
+
+* Improved error handling and logging
+* Restore the original alloy tts-1-hd voice by default, use alloy-alt for the old voice.
+
 Version 0.11.0, 2024-05-29
 
 * 🌐 [Multilingual](#multilingual) support (16 languages) with XTTS
@@ -95,7 +100,7 @@ bash startup.sh
 ## Usage
 
 ```
-usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT] [-H HOST]
+usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT] [-H HOST] [-L {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 
 OpenedAI Speech API Server
 
@@ -106,6 +111,8 @@ options:
   --preload PRELOAD     Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use. (default: None)
   -P PORT, --port PORT  Server tcp port (default: 8000)
   -H HOST, --host HOST  Host to listen on, Ex. 0.0.0.0 (default: 0.0.0.0)
+  -L {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        Set the log level (default: INFO)
 
 ```
 
@@ -213,7 +220,7 @@ Coqui XTTS v2 voice cloning can work with as little as 6 seconds of clear audio.
 * Mono (single channel) 22050 Hz WAV file
 * 6-30 seconds long - longer isn't always better (I've had some good results with as little as 4 seconds)
 * low noise (no hiss or hum)
-* No partial words, breathing, music or backgrounds sounds
+* No partial words, breathing, laughing, music or backgrounds sounds
 * An even speaking pace with a variety of words is best, like in interviews or audiobooks.
 
 You can use FFmpeg to prepare your audio files, here are some examples:

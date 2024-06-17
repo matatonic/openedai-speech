@@ -24,12 +24,12 @@
     model: voices/en_US-libritts_r-medium.onnx
     speaker: 163
 tts-1-hd:
-  alloy:
+  alloy-alt:
     model: xtts
     speaker: voices/alloy-alt.wav
-  alloy-orig: 
+  alloy:
     model: xtts
-    speaker: voices/alloy.wav # it's REALLY BAD
+    speaker: voices/alloy.wav
   echo:
     model: xtts
     speaker: voices/echo.wav

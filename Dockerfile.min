@@ -15,5 +15,6 @@ COPY config/voice_to_speaker.default.yaml config/pre_process_map.default.yaml /a
 
 ENV TTS_HOME=voices
 ENV HF_HOME=voices
+ENV OPENEDAI_LOG_LEVEL=INFO
 
 CMD bash startup.min.sh
