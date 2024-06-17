@@ -196,6 +196,7 @@ options:
   -o OUTPUT, --output OUTPUT
                         The filename to save the output to (default: None)
   -p, --playsound       Play the audio (default: False)
+
 ```
 
 ## Custom Voices Howto
