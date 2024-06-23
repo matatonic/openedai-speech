@@ -11,71 +11,52 @@ import uvicorn
 from pydantic import BaseModel
 from loguru import logger
 
-# for parler
-try:
-    from parler_tts import ParlerTTSForConditionalGeneration
-    from transformers import AutoTokenizer, logging
-    import torch
-    import soundfile as sf
-    logging.set_verbosity_error()
-    has_parler_tts = True
-except ImportError:
-    logger.info("No parler support found")
-    has_parler_tts = False
-
-from openedai import OpenAIStub, BadRequestError
+from openedai import OpenAIStub, BadRequestError, ServiceUnavailableError
 
 xtts = None
 args = None
 app = OpenAIStub()
 
 class xtts_wrapper():
-    def __init__(self, model_name, device):
+    def __init__(self, model_name, device, model_path=None):
         self.model_name = model_name
-        self.xtts = TTS(model_name=model_name, progress_bar=False).to(device)
+
+        logger.info(f"Loading model {self.model_name} to {device}")
+
+        if model_path: # custom model #  and config_path
+            config_path=os.path.join(model_path, 'config.json')
+            self.xtts = TTS(model_path=model_path, config_path=config_path).to(device)
+        else:
+            self.xtts = TTS(model_name=model_name).to(device)
 
     def tts(self, text, speaker_wav, speed, language):
-        tf, file_path = tempfile.mkstemp(suffix='.wav')
+        tf, file_path = tempfile.mkstemp(suffix='.wav', prefix='openedai-speech-')
 
-        file_path = self.xtts.tts_to_file(
-            text=text,
-            language=language,
-            speaker_wav=speaker_wav,
-            speed=speed,
-            file_path=file_path,
-        )
+        try:
+            # TODO: support speaker= as voice id instead of just wav
+            file_path = self.xtts.tts_to_file(
+                text=text,
+                language=language,
+                speaker_wav=speaker_wav,
+                speed=speed,
+                file_path=file_path, 
+            )
 
-        os.unlink(file_path)
+        finally:
+            os.unlink(file_path)
+
         return tf
-
-class parler_tts():
-    def __init__(self, model_name, device):
-        self.model_name = model_name
-        self.model = ParlerTTSForConditionalGeneration.from_pretrained(model_name).to(device)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-    def tts(self, text, description):
-        input_ids = self.tokenizer(description, return_tensors="pt").input_ids.to(self.model.device)
-        prompt_input_ids = self.tokenizer(text, return_tensors="pt").input_ids.to(self.model.device)
-
-        generation = self.model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
-        audio_arr = generation.cpu().numpy().squeeze()
-        
-        tf, file_path = tempfile.mkstemp(suffix='.wav')
-        sf.write(file_path, audio_arr, self.model.config.sampling_rate)
-        os.unlink(file_path)
-        return tf
-
 
 def default_exists(filename: str):
     if not os.path.exists(filename):
-        basename, ext = os.path.splitext(filename)
+        fpath, ext = os.path.splitext(filename)
+        basename = os.path.basename(fpath)
         default = f"{basename}.default{ext}"
         
         logger.info(f"{filename} does not exist, setting defaults from {default}")
 
-        with open(default, 'r') as from_file:
-            with open(filename, 'w') as to_file:
+        with open(default, 'r', encoding='utf8') as from_file:
+            with open(filename, 'w', encoding='utf8') as to_file:
                 to_file.write(from_file.read())
 
 # Read pre process map on demand so it can be changed without restarting the server
@@ -97,14 +78,10 @@ def map_voice_to_speaker(voice: str, model: str):
     with open('config/voice_to_speaker.yaml', 'r', encoding='utf8') as file:
         voice_map = yaml.safe_load(file)
         try:
-            m = voice_map[model][voice]['model']
-            s = voice_map[model][voice]['speaker']
-            l = voice_map[model][voice].get('language', 'en')
+            return voice_map[model][voice]
 
         except KeyError as e:
             raise BadRequestError(f"Error loading voice: {voice}, KeyError: {e}", param='voice')
-        
-        return (m, s, l)
 
 class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
@@ -162,7 +139,15 @@ async def generate_speech(request: GenerateSpeechRequest):
 
     # Use piper for tts-1, and if xtts_device == none use for all models.
     if model == 'tts-1' or args.xtts_device == 'none':
-        piper_model, speaker, not_used_language = map_voice_to_speaker(voice, 'tts-1')
+        voice_map = map_voice_to_speaker(voice, 'tts-1')
+        try:
+            piper_model = voice_map['model']
+
+        except KeyError as e:
+            raise ServiceUnavailableError(f"Configuration error: tts-1 voice '{voice}' is missing 'model:' setting. KeyError: {e}")
+
+        speaker = voice_map.get('speaker', None)
+
         tts_args = ["piper", "--model", str(piper_model), "--data-dir", "voices", "--download-dir", "voices", "--output-raw"]
         if speaker:
             tts_args.extend(["--speaker", str(speaker)])
@@ -177,7 +162,16 @@ async def generate_speech(request: GenerateSpeechRequest):
 
     # Use xtts for tts-1-hd
     elif model == 'tts-1-hd':
-        tts_model, speaker, language = map_voice_to_speaker(voice, 'tts-1-hd')
+        voice_map = map_voice_to_speaker(voice, 'tts-1-hd')
+        try:
+            tts_model = voice_map['model']
+            speaker = voice_map['speaker']
+
+        except KeyError as e:
+            raise ServiceUnavailableError(f"Configuration error: tts-1-hd voice '{voice}' is missing setting. KeyError: {e}")
+
+        language = voice_map.get('language', 'en')
+        tts_model_path = voice_map.get('model_path', None)
 
         if xtts is not None and xtts.model_name != tts_model:
             import torch, gc
@@ -186,20 +180,9 @@ async def generate_speech(request: GenerateSpeechRequest):
             gc.collect()
             torch.cuda.empty_cache()
 
-        if 'parler-tts' in tts_model and has_parler_tts:
-            if xtts is None:
-                xtts = parler_tts(tts_model, device=args.xtts_device)
-
-            ffmpeg_args = build_ffmpeg_args(response_format, input_format="WAV", sample_rate=str(xtts.model.config.sampling_rate))
-
-            if speed != 1:
-                ffmpeg_args.extend(["-af", f"atempo={speed}"]) 
-
-            tts_io_out = xtts.tts(text=input_text, description=speaker)
-
         else:
             if xtts is None:
-                xtts = xtts_wrapper(tts_model, device=args.xtts_device)
+                xtts = xtts_wrapper(tts_model, device=args.xtts_device, model_path=tts_model_path)
 
             ffmpeg_args = build_ffmpeg_args(response_format, input_format="WAV", sample_rate="24000")
 
@@ -235,6 +218,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    default_exists('config/pre_process_map.yaml')
+    default_exists('config/voice_to_speaker.yaml')
+
     logger.remove()
     logger.add(sink=sys.stderr, level=args.log_level)
 
@@ -242,10 +228,7 @@ if __name__ == "__main__":
         from TTS.api import TTS
 
     if args.preload:
-        if 'parler-tts' in args.preload:
-            xtts = parler_tts(args.preload, device=args.xtts_device)
-        else:
-            xtts = xtts_wrapper(args.preload, device=args.xtts_device)
+        xtts = xtts_wrapper(args.preload, device=args.xtts_device)
 
     app.register_model('tts-1')
     app.register_model('tts-1-hd')

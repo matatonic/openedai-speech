@@ -19,12 +19,21 @@ Details:
 * Model `tts-1-hd` via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, but requires around 4GB GPU VRAM)
   * Custom cloned voices can be used for tts-1-hd, See: [Custom Voices Howto](#custom-voices-howto)
   * 🌐 [Multilingual](#multilingual) support with XTTS voices
+  * [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
 * Occasionally, certain words or symbols may sound incorrect, you can fix them with regex via `pre_process_map.yaml`
 
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
 ## Recent Changes
+
+Version 0.13.0, 2024-06-22
+
+* Added [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
+* Initial prebuilt arm64 image support (Apple M1/2/3, Raspberry Pi), thanks @JakeStevenson, @hchasens
+* Parler-tts support removed
+* Move the *.default.yaml to the root folder
+* Added 'audio_reader.py' for streaming text input and reading long texts
 
 Version 0.12.3, 2024-06-17
 
@@ -284,3 +293,24 @@ Remove:
 These lines were added to the `config/pre_process_map.yaml` config file by default before version 0.11.0:
 
 4) Your new multi-lingual speaker voice is ready to use!
+
+
+## Custom Fine-Tuned Model Support
+
+Adding a custom xtts model is simple. Here is an example of how to add a custom fine-tuned 'halo' XTTS model.
+
+1) Save the model folder under `voices/` (all 4 files are required, including the vocab.json from the model)
+```
+openedai-speech$ ls voices/halo/
+config.json  vocab.json  model.pth  sample.wav
+```
+2) Add the custom voice entry under the `tts-1-hd` section of `config/voice_to_speaker.yaml`:
+```yaml
+tts-1-hd:
+...
+  halo:
+    model: halo # This name is required to be unique
+    speaker: voices/halo/sample.wav # voice sample is required
+    model_path: voices/halo
+```
+3) The model will be loaded when you access the voice for the first time (`--preload` doesn't work with custom models yet)

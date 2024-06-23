@@ -10,5 +10,3 @@ TTS
 torch==2.2.2
 # XXX, 3.8+ has some issue for now
 spacy==3.7.4
-# parler-tts
-git+https://github.com/huggingface/parler-tts.git
