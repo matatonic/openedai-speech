@@ -101,9 +101,9 @@ if __name__ == "__main__":
         description='Text to speech player',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('-m', '--model', action='store', default="tts-1")
-    parser.add_argument('-v', '--voice', action='store', default="alloy")
-    parser.add_argument('-s', '--speed', action='store', default=1.0)
+    parser.add_argument('-m', '--model', action='store', default="tts-1", help="The OpenAI model")
+    parser.add_argument('-v', '--voice', action='store', default="alloy", help="The voice to use")
+    parser.add_argument('-s', '--speed', action='store', default=1.0, help="How fast to read the audio")
 
     args = parser.parse_args()
 

@@ -10,9 +10,7 @@ services:
       - ./voices:/app/voices
       - ./config:/app/config
     # To install as a service
-    #restart: unless-stopped
-    # Set nvidia runtime if it's not the default
-    #runtime: nvidia
+    restart: unless-stopped
     deploy:
       resources:
         reservations:

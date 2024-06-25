@@ -30,10 +30,12 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 Version 0.13.0, 2024-06-22
 
 * Added [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
-* Initial prebuilt arm64 image support (Apple M1/2/3, Raspberry Pi), thanks @JakeStevenson, @hchasens
+* Initial prebuilt arm64 image support with MPS (Apple M-series, Raspberry Pi), thanks @JakeStevenson, @hchasens
+* Initial AMD GPU (rocm 5.7) support, set USE_ROCM=1 when building docker or use requirements-rocm.txt
 * Parler-tts support removed
 * Move the *.default.yaml to the root folder
-* Added 'audio_reader.py' for streaming text input and reading long texts
+* Run the docker as a service by default (`restart: unless-stopped`)
+* Added `audio_reader.py` for streaming text input and reading long texts
 
 Version 0.12.3, 2024-06-17
 
@@ -84,10 +86,12 @@ Version: 0.7.3, 2024-03-20
 
 ## Installation instructions
 
-1) Copy the `sample.env` to `speech.env` (customize if needed)
+1. Copy the `sample.env` to `speech.env` (customize if needed)
 ```bash
 cp sample.env speech.env
 ```
+#### AMD GPU (ROCm support)
+> If you have an AMD GPU and want to use ROCm, set `USE_ROCM=1` in the `speech.env` before building the docker image. You will need to `docker compose build` before running the container in the next step.
 
 2. Option: Docker (**recommended**) (prebuilt images are available)
 
@@ -95,9 +99,8 @@ Run the server:
 ```shell
 docker compose up
 ```
-For a minimal docker image with only piper support (<1GB vs. 8GB), use `docker compose -f docker-compose.min.yml up`
+> For a minimal docker image with only piper support (<1GB vs. 8GB) use `docker compose -f docker-compose.min.yml up`
 
-To install the docker image as a service, edit the `docker-compose.yml` and uncomment `restart: unless-stopped`, then start the service with: `docker compose up -d`
 
 
 2. Option: Manual installation:
@@ -107,7 +110,7 @@ sudo apt install curl ffmpeg
 # Create & activate a new virtual environment (optional but recommended)
 python -m venv .venv
 source .venv/bin/activate
-# Install the Python requirements
+# Install the Python requirements - use requirements-rocm.txt for AMD GPU (ROCm support)
 pip install -r requirements.txt
 # run the server
 bash startup.sh
@@ -156,7 +159,7 @@ curl http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -
 Or just like this:
 
 ```shell
-curl http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d '{
+curl -s http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d '{
     "input": "The quick brown fox jumped over the lazy dog."}' > speech.mp3
 ```
 
@@ -184,8 +187,10 @@ with client.audio.speech.with_streaming_response.create(
 Also see the `say.py` sample application for an example of how to use the openai-python API.
 
 ```shell
-python say.py -t "The quick brown fox jumped over the lazy dog." -p # play the audio, requires 'pip install playsound'
-python say.py -t "The quick brown fox jumped over the lazy dog." -m tts-1-hd -v onyx -f flac -o fox.flac # save to a file.
+# play the audio, requires 'pip install playsound'
+python say.py -t "The quick brown fox jumped over the lazy dog." -p
+# save to a file in flac format
+python say.py -t "The quick brown fox jumped over the lazy dog." -m tts-1-hd -v onyx -f flac -o fox.flac
 ```
 
 ```
@@ -210,6 +215,28 @@ options:
                         The filename to save the output to (default: None)
   -p, --playsound       Play the audio (default: False)
 
+```
+
+You can also try the included `audio_reader.py` for listening to longer text and streamed input.
+
+```
+usage: audio_reader.py [-h] [-m MODEL] [-v VOICE] [-s SPEED]
+
+Text to speech player
+
+options:
+  -h, --help            show this help message and exit
+  -m MODEL, --model MODEL
+                        The OpenAI model (default: tts-1)
+  -v VOICE, --voice VOICE
+                        The voice to use (default: alloy)
+  -s SPEED, --speed SPEED
+                        How fast to read the audio (default: 1.0)
+
+```
+Example usage:
+```bash
+$ python audio_reader.py -s 2 < LICENSE
 ```
 
 ## Custom Voices Howto
@@ -260,13 +287,13 @@ For example:
 ...
 tts-1-hd:
   me:
-    model: xtts_v2.0.2 # you can specify different xtts versions
+    model: xtts
     speaker: voices/me.wav # this could be you
 ```
 
 ## Multilingual
 
-Multilingual support was added in version 0.11.0 and is available only with the XTTS v2 model.
+Multilingual cloning support was added in version 0.11.0 and is available only with the XTTS v2 model. To use multilingual voices with piper simply download a language specific voice.
 
 Coqui XTTSv2 has support for 16 languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Italian (`it`), Portuguese (`pt`), Polish (`pl`), Turkish (`tr`), Russian (`ru`), Dutch (`nl`), Czech (`cs`), Arabic (`ar`), Chinese (`zh-cn`), Japanese (`ja`), Hungarian (`hu`) and Korean (`ko`).
 

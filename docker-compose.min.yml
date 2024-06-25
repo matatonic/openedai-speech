@@ -10,4 +10,4 @@ services:
       - ./voices:/app/voices
       - ./config:/app/config
     # To install as a service
-    #restart: unless-stopped
+    restart: unless-stopped
