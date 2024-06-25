@@ -10,12 +10,11 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 RUN mkdir -p voices config
 
-RUN --mount=type=cache,target=/root/.cache/pip pip install piper-tts==1.2.0 pyyaml fastapi uvicorn loguru numpy\<2
-
+COPY requirements*.txt /app/
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-min.txt
 COPY speech.py openedai.py say.py *.sh *.default.yaml README.md LICENSE /app/
 
 ENV TTS_HOME=voices
 ENV HF_HOME=voices
-ENV OPENEDAI_LOG_LEVEL=INFO
 
 CMD bash startup.min.sh

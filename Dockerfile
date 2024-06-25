@@ -14,7 +14,7 @@ ARG USE_ROCM
 ENV USE_ROCM=${USE_ROCM}
 
 COPY requirements*.txt /app/
-RUN if [ ${USE_ROCM} = "1" ]; then mv /app/requirements-rocm.txt /app/requirements.txt; fi
+RUN if [ "${USE_ROCM}" = "1" ]; then mv /app/requirements-rocm.txt /app/requirements.txt; fi
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 COPY speech.py openedai.py say.py *.sh *.default.yaml README.md LICENSE /app/
@@ -23,7 +23,6 @@ ARG PRELOAD_MODEL
 ENV PRELOAD_MODEL=${PRELOAD_MODEL}
 ENV TTS_HOME=voices
 ENV HF_HOME=voices
-ENV OPENEDAI_LOG_LEVEL=INFO
 ENV COQUI_TOS_AGREED=1
 
 CMD bash startup.sh

@@ -27,11 +27,11 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
-Version 0.13.0, 2024-06-22
+Version 0.13.0, 2024-06-25
 
 * Added [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
-* Initial prebuilt arm64 image support with MPS (Apple M-series, Raspberry Pi), thanks @JakeStevenson, @hchasens
-* Initial AMD GPU (rocm 5.7) support, set USE_ROCM=1 when building docker or use requirements-rocm.txt
+* Initial prebuilt arm64 image support (Apple M-series, Raspberry Pi - MPS is not supported in XTTS/torch), thanks @JakeStevenson, @hchasens
+* Initial attempt at AMD GPU (ROCm 5.7) support
 * Parler-tts support removed
 * Move the *.default.yaml to the root folder
 * Run the docker as a service by default (`restart: unless-stopped`)
@@ -86,63 +86,68 @@ Version: 0.7.3, 2024-03-20
 
 ## Installation instructions
 
-1. Copy the `sample.env` to `speech.env` (customize if needed)
+### Create a `speech.env` environment file
+
+Copy the `sample.env` to `speech.env` (customize if needed)
 ```bash
 cp sample.env speech.env
 ```
-#### AMD GPU (ROCm support)
-> If you have an AMD GPU and want to use ROCm, set `USE_ROCM=1` in the `speech.env` before building the docker image. You will need to `docker compose build` before running the container in the next step.
 
-2. Option: Docker (**recommended**) (prebuilt images are available)
-
-Run the server:
-```shell
-docker compose up
+#### Defaults
+```bash
+TTS_HOME=voices
+HF_HOME=voices
+#PRELOAD_MODEL=xtts
+#PRELOAD_MODEL=xtts_v2.0.2
+#EXTRA_ARGS=--log-level DEBUG
+#USE_ROCM=1
 ```
-> For a minimal docker image with only piper support (<1GB vs. 8GB) use `docker compose -f docker-compose.min.yml up`
 
-
-
-2. Option: Manual installation:
+### Option A: Manual installation
 ```shell
 # install curl and ffmpeg
 sudo apt install curl ffmpeg
 # Create & activate a new virtual environment (optional but recommended)
 python -m venv .venv
 source .venv/bin/activate
-# Install the Python requirements - use requirements-rocm.txt for AMD GPU (ROCm support)
+# Install the Python requirements
+# - use requirements-rocm.txt for AMD GPU (ROCm support)
+# - use requirements-min.txt for piper only (CPU only)
 pip install -r requirements.txt
 # run the server
 bash startup.sh
 ```
 
+> On first run, the voice models will be downloaded automatically. This might take a while depending on your network connection.
 
-## Usage
+### Option B: Docker Image (*recommended*)
 
-```
-usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT] [-H HOST] [-L {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+#### Nvidia GPU (cuda)
 
-OpenedAI Speech API Server
-
-options:
-  -h, --help            show this help message and exit
-  --xtts_device XTTS_DEVICE
-                        Set the device for the xtts model. The special value of 'none' will use piper for all models. (default: cuda)
-  --preload PRELOAD     Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use. (default: None)
-  -P PORT, --port PORT  Server tcp port (default: 8000)
-  -H HOST, --host HOST  Host to listen on, Ex. 0.0.0.0 (default: 0.0.0.0)
-  -L {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                        Set the log level (default: INFO)
-
+```shell
+docker compose up
 ```
 
-## API Documentation
+#### AMD GPU (ROCm support)
 
-* [OpenAI Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech)
-* [OpenAI API Reference](https://platform.openai.com/docs/api-reference/audio/createSpeech)
+```shell
+docker compose -d docker-compose.rocm.yml up
+```
+
+#### ARM64 (Apple M-series, Raspberry Pi)
+
+> XTTS only has CPU support here and will be very slow, you can use the Nvidia image for XTTS with CPU (slow), or use the piper only image (recommended)
+
+#### CPU only, No GPU (piper only)
+
+> For a minimal docker image with only piper support (<1GB vs. 8GB).
+
+```shell
+docker compose -f docker-compose.min.yml up
+```
 
 
-### Sample API Usage
+## Sample Usage
 
 You can use it like this:
 
@@ -193,51 +198,18 @@ python say.py -t "The quick brown fox jumped over the lazy dog." -p
 python say.py -t "The quick brown fox jumped over the lazy dog." -m tts-1-hd -v onyx -f flac -o fox.flac
 ```
 
-```
-usage: say.py [-h] [-m MODEL] [-v VOICE] [-f {mp3,aac,opus,flac}] [-s SPEED] [-t TEXT] [-i INPUT] [-o OUTPUT] [-p]
-
-Text to speech using the OpenAI API
-
-options:
-  -h, --help            show this help message and exit
-  -m MODEL, --model MODEL
-                        The model to use (default: tts-1)
-  -v VOICE, --voice VOICE
-                        The voice of the speaker (default: alloy)
-  -f {mp3,aac,opus,flac}, --format {mp3,aac,opus,flac}
-                        The output audio format (default: mp3)
-  -s SPEED, --speed SPEED
-                        playback speed, 0.25-4.0 (default: 1.0)
-  -t TEXT, --text TEXT  Provide text to read on the command line (default: None)
-  -i INPUT, --input INPUT
-                        Read text from a file (default is to read from stdin) (default: None)
-  -o OUTPUT, --output OUTPUT
-                        The filename to save the output to (default: None)
-  -p, --playsound       Play the audio (default: False)
-
-```
-
 You can also try the included `audio_reader.py` for listening to longer text and streamed input.
 
-```
-usage: audio_reader.py [-h] [-m MODEL] [-v VOICE] [-s SPEED]
-
-Text to speech player
-
-options:
-  -h, --help            show this help message and exit
-  -m MODEL, --model MODEL
-                        The OpenAI model (default: tts-1)
-  -v VOICE, --voice VOICE
-                        The voice to use (default: alloy)
-  -s SPEED, --speed SPEED
-                        How fast to read the audio (default: 1.0)
-
-```
 Example usage:
 ```bash
-$ python audio_reader.py -s 2 < LICENSE
+python audio_reader.py -s 2 < LICENSE # read the software license - fast
 ```
+
+## OpenAI API Documentation and Guide
+
+* [OpenAI Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech)
+* [OpenAI API Reference](https://platform.openai.com/docs/api-reference/audio/createSpeech)
+
 
 ## Custom Voices Howto
 

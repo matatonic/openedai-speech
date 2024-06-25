@@ -1,0 +1,6 @@
+pyyaml
+fastapi
+uvicorn
+loguru
+numpy<2
+piper-tts==1.2.0

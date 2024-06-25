@@ -204,7 +204,7 @@ async def generate_speech(request: GenerateSpeechRequest):
 
     return StreamingResponse(content=ffmpeg_proc.stdout, media_type=media_type)
 
-
+# We return 'mps' but currently XTTS will not work with mps devices as the cuda support is incomplete
 def auto_torch_device():
     try:
         import torch
@@ -212,7 +212,6 @@ def auto_torch_device():
     
     except:
         return 'none'
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
