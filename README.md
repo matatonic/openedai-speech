@@ -19,12 +19,23 @@ Details:
 * Model `tts-1-hd` via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, but requires around 4GB GPU VRAM)
   * Custom cloned voices can be used for tts-1-hd, See: [Custom Voices Howto](#custom-voices-howto)
   * 🌐 [Multilingual](#multilingual) support with XTTS voices
+  * [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
 * Occasionally, certain words or symbols may sound incorrect, you can fix them with regex via `pre_process_map.yaml`
 
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
 ## Recent Changes
+
+Version 0.13.0, 2024-06-25
+
+* Added [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
+* Initial prebuilt arm64 image support (Apple M-series, Raspberry Pi - MPS is not supported in XTTS/torch), thanks @JakeStevenson, @hchasens
+* Initial attempt at AMD GPU (ROCm 5.7) support
+* Parler-tts support removed
+* Move the *.default.yaml to the root folder
+* Run the docker as a service by default (`restart: unless-stopped`)
+* Added `audio_reader.py` for streaming text input and reading long texts
 
 Version 0.12.3, 2024-06-17
 
@@ -75,23 +86,24 @@ Version: 0.7.3, 2024-03-20
 
 ## Installation instructions
 
-1) Copy the `sample.env` to `speech.env` (customize if needed)
+### Create a `speech.env` environment file
+
+Copy the `sample.env` to `speech.env` (customize if needed)
 ```bash
 cp sample.env speech.env
 ```
 
-2. Option: Docker (**recommended**) (prebuilt images are available)
-
-Run the server:
-```shell
-docker compose up
+#### Defaults
+```bash
+TTS_HOME=voices
+HF_HOME=voices
+#PRELOAD_MODEL=xtts
+#PRELOAD_MODEL=xtts_v2.0.2
+#EXTRA_ARGS=--log-level DEBUG
+#USE_ROCM=1
 ```
-For a minimal docker image with only piper support (<1GB vs. 8GB), use `docker compose -f docker-compose.min.yml up`
 
-To install the docker image as a service, edit the `docker-compose.yml` and uncomment `restart: unless-stopped`, then start the service with: `docker compose up -d`
-
-
-2. Option: Manual installation:
+### Option A: Manual installation
 ```shell
 # install curl and ffmpeg
 sudo apt install curl ffmpeg
@@ -99,38 +111,43 @@ sudo apt install curl ffmpeg
 python -m venv .venv
 source .venv/bin/activate
 # Install the Python requirements
+# - use requirements-rocm.txt for AMD GPU (ROCm support)
+# - use requirements-min.txt for piper only (CPU only)
 pip install -r requirements.txt
 # run the server
 bash startup.sh
 ```
 
+> On first run, the voice models will be downloaded automatically. This might take a while depending on your network connection.
 
-## Usage
+### Option B: Docker Image (*recommended*)
 
-```
-usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [-P PORT] [-H HOST] [-L {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+#### Nvidia GPU (cuda)
 
-OpenedAI Speech API Server
-
-options:
-  -h, --help            show this help message and exit
-  --xtts_device XTTS_DEVICE
-                        Set the device for the xtts model. The special value of 'none' will use piper for all models. (default: cuda)
-  --preload PRELOAD     Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use. (default: None)
-  -P PORT, --port PORT  Server tcp port (default: 8000)
-  -H HOST, --host HOST  Host to listen on, Ex. 0.0.0.0 (default: 0.0.0.0)
-  -L {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                        Set the log level (default: INFO)
-
+```shell
+docker compose up
 ```
 
-## API Documentation
+#### AMD GPU (ROCm support)
 
-* [OpenAI Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech)
-* [OpenAI API Reference](https://platform.openai.com/docs/api-reference/audio/createSpeech)
+```shell
+docker compose -d docker-compose.rocm.yml up
+```
+
+#### ARM64 (Apple M-series, Raspberry Pi)
+
+> XTTS only has CPU support here and will be very slow, you can use the Nvidia image for XTTS with CPU (slow), or use the piper only image (recommended)
+
+#### CPU only, No GPU (piper only)
+
+> For a minimal docker image with only piper support (<1GB vs. 8GB).
+
+```shell
+docker compose -f docker-compose.min.yml up
+```
 
 
-### Sample API Usage
+## Sample Usage
 
 You can use it like this:
 
@@ -147,7 +164,7 @@ curl http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -
 Or just like this:
 
 ```shell
-curl http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d '{
+curl -s http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d '{
     "input": "The quick brown fox jumped over the lazy dog."}' > speech.mp3
 ```
 
@@ -175,33 +192,24 @@ with client.audio.speech.with_streaming_response.create(
 Also see the `say.py` sample application for an example of how to use the openai-python API.
 
 ```shell
-python say.py -t "The quick brown fox jumped over the lazy dog." -p # play the audio, requires 'pip install playsound'
-python say.py -t "The quick brown fox jumped over the lazy dog." -m tts-1-hd -v onyx -f flac -o fox.flac # save to a file.
+# play the audio, requires 'pip install playsound'
+python say.py -t "The quick brown fox jumped over the lazy dog." -p
+# save to a file in flac format
+python say.py -t "The quick brown fox jumped over the lazy dog." -m tts-1-hd -v onyx -f flac -o fox.flac
 ```
 
+You can also try the included `audio_reader.py` for listening to longer text and streamed input.
+
+Example usage:
+```bash
+python audio_reader.py -s 2 < LICENSE # read the software license - fast
 ```
-usage: say.py [-h] [-m MODEL] [-v VOICE] [-f {mp3,aac,opus,flac}] [-s SPEED] [-t TEXT] [-i INPUT] [-o OUTPUT] [-p]
 
-Text to speech using the OpenAI API
+## OpenAI API Documentation and Guide
 
-options:
-  -h, --help            show this help message and exit
-  -m MODEL, --model MODEL
-                        The model to use (default: tts-1)
-  -v VOICE, --voice VOICE
-                        The voice of the speaker (default: alloy)
-  -f {mp3,aac,opus,flac}, --format {mp3,aac,opus,flac}
-                        The output audio format (default: mp3)
-  -s SPEED, --speed SPEED
-                        playback speed, 0.25-4.0 (default: 1.0)
-  -t TEXT, --text TEXT  Provide text to read on the command line (default: None)
-  -i INPUT, --input INPUT
-                        Read text from a file (default is to read from stdin) (default: None)
-  -o OUTPUT, --output OUTPUT
-                        The filename to save the output to (default: None)
-  -p, --playsound       Play the audio (default: False)
+* [OpenAI Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech)
+* [OpenAI API Reference](https://platform.openai.com/docs/api-reference/audio/createSpeech)
 
-```
 
 ## Custom Voices Howto
 
@@ -251,13 +259,13 @@ For example:
 ...
 tts-1-hd:
   me:
-    model: xtts_v2.0.2 # you can specify different xtts versions
+    model: xtts
     speaker: voices/me.wav # this could be you
 ```
 
 ## Multilingual
 
-Multilingual support was added in version 0.11.0 and is available only with the XTTS v2 model.
+Multilingual cloning support was added in version 0.11.0 and is available only with the XTTS v2 model. To use multilingual voices with piper simply download a language specific voice.
 
 Coqui XTTSv2 has support for 16 languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Italian (`it`), Portuguese (`pt`), Polish (`pl`), Turkish (`tr`), Russian (`ru`), Dutch (`nl`), Czech (`cs`), Arabic (`ar`), Chinese (`zh-cn`), Japanese (`ja`), Hungarian (`hu`) and Korean (`ko`).
 
@@ -284,3 +292,24 @@ Remove:
 These lines were added to the `config/pre_process_map.yaml` config file by default before version 0.11.0:
 
 4) Your new multi-lingual speaker voice is ready to use!
+
+
+## Custom Fine-Tuned Model Support
+
+Adding a custom xtts model is simple. Here is an example of how to add a custom fine-tuned 'halo' XTTS model.
+
+1) Save the model folder under `voices/` (all 4 files are required, including the vocab.json from the model)
+```
+openedai-speech$ ls voices/halo/
+config.json  vocab.json  model.pth  sample.wav
+```
+2) Add the custom voice entry under the `tts-1-hd` section of `config/voice_to_speaker.yaml`:
+```yaml
+tts-1-hd:
+...
+  halo:
+    model: halo # This name is required to be unique
+    speaker: voices/halo/sample.wav # voice sample is required
+    model_path: voices/halo
+```
+3) The model will be loaded when you access the voice for the first time (`--preload` doesn't work with custom models yet)

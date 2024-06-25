@@ -1,4 +1,4 @@
-# regex pairs to clean the text before speaking
+﻿# regex pairs to clean the text before speaking
 - - ([^.])\.$
   - \1
 - - '&amp;'

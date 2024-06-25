@@ -1,0 +1,27 @@
+services:
+  server:
+    build:
+      dockerfile: Dockerfile
+      args:
+        - USE_ROCM=1
+    image: ghcr.io/matatonic/openedai-speech-rocm
+    env_file: speech.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./voices:/app/voices
+      - ./config:/app/config
+    # To install as a service
+    restart: unless-stopped
+    # For AMD GPU (ROCm) Support
+    cap_add:
+      - SYS_PTRACE
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    security_opt:
+      - seccomp=unconfined
+    group_add:
+      - video
+      - audio
+    ipc: host
