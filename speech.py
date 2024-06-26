@@ -87,7 +87,7 @@ class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
     input: str
     voice: str = "alloy"  # alloy, echo, fable, onyx, nova, and shimmer
-    response_format: str = "mp3" # mp3, opus, aac, flac
+    response_format: str = "mp3" # mp3, opus, aac, flac, wav
     speed: float = 1.0 # 0.25 - 4.0
 
 def build_ffmpeg_args(response_format, input_format, sample_rate):
@@ -105,6 +105,8 @@ def build_ffmpeg_args(response_format, input_format, sample_rate):
         ffmpeg_args.extend(["-f", "adts", "-c:a", "aac", "-ab", "64k"])
     elif response_format == "flac":
         ffmpeg_args.extend(["-f", "flac", "-c:a", "flac"])
+    elif response_format == "wav":
+        ffmpeg_args.extend(["-f", "wav", "-c:a", "pcm_s16le"])
 
     return ffmpeg_args
 
@@ -133,6 +135,8 @@ async def generate_speech(request: GenerateSpeechRequest):
         media_type = "audio/aac"
     elif response_format == "flac":
         media_type = "audio/x-flac"
+    elif response_format == "wav":
+        media_type = "audio/wav"        
 
     ffmpeg_args = None
     tts_io_out = None
