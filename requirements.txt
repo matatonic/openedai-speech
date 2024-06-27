@@ -1,22 +1,14 @@
 fastapi
 uvicorn
 loguru
-# piper-tts
-piper-tts==1.2.0
-# xtts
-TTS==0.22.0
-# https://github.com/huggingface/transformers/issues/31040
-transformers<4.41.0 
-deepspeed<0.14.0
-# XXX, 3.8+ has some issue for now
-spacy==3.7.4
+piper-tts
+coqui-tts[languages]
+deepspeed
 
-# torch==2.2.2 Fixes: https://github.com/matatonic/openedai-speech/issues/9
-# Re:  https://github.com/pytorch/pytorch/issues/121834
-torch==2.2.2; sys_platform != "darwin"
+torch; sys_platform != "darwin"
 torchaudio; sys_platform != "darwin"
 # for MPS accelerated torch on Mac - doesn't work yet, incomplete support in torch and torchaudio
-torch==2.2.2; --index-url https://download.pytorch.org/whl/cpu; sys_platform == "darwin"
-torchaudio==2.2.2; --index-url https://download.pytorch.org/whl/cpu; sys_platform == "darwin"
+torch; --index-url https://download.pytorch.org/whl/cpu; sys_platform == "darwin"
+torchaudio; --index-url https://download.pytorch.org/whl/cpu; sys_platform == "darwin"
 
 # ROCM (Linux only) - use requirements.amd.txt

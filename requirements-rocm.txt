@@ -1,17 +1,8 @@
 fastapi
 uvicorn
 loguru
-# piper-tts
-piper-tts==1.2.0
-# xtts
-TTS==0.22.0
-# https://github.com/huggingface/transformers/issues/31040
-transformers<4.41.0
-deepspeed<0.14.0
-# XXX, 3.8+ has some issue for now
-spacy==3.7.4
-
-# torch==2.2.2 Fixes: https://github.com/matatonic/openedai-speech/issues/9
-# Re:  https://github.com/pytorch/pytorch/issues/121834
-torch==2.2.2; --index-url https://download.pytorch.org/whl/rocm5.7; sys_platform == "linux"
-torchaudio==2.2.2; --index-url https://download.pytorch.org/whl/rocm5.7; sys_platform == "linux"
+piper-tts
+coqui-tts
+deepspeed
+torch; --index-url https://download.pytorch.org/whl/rocm5.7; sys_platform == "linux"
+torchaudio; --index-url https://download.pytorch.org/whl/rocm5.7; sys_platform == "linux"

@@ -92,7 +92,8 @@ class xtts_wrapper():
         self.not_idle()
         try:
             with torch.no_grad():
-                gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=[speaker_wav]) # XXX TODO: allow multiple wav
+                with self.lock: # this doesn't seem threadsafe, but it's quick enough
+                    gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=[speaker_wav]) # XXX TODO: allow multiple wav
 
                 for wav in self.xtts.inference_stream(text, language, gpt_cond_latent, speaker_embedding, **hf_generate_kwargs):
                     yield wav.cpu().numpy().tobytes() # assumes wav data is f32le

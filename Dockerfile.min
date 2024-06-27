@@ -12,7 +12,7 @@ RUN mkdir -p voices config
 
 COPY requirements*.txt /app/
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-min.txt
-COPY speech.py openedai.py say.py *.sh *.default.yaml README.md LICENSE /app/
+COPY *.py *.sh *.default.yaml README.md LICENSE /app/
 
 ENV TTS_HOME=voices
 ENV HF_HOME=voices
