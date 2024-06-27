@@ -29,6 +29,10 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version 0.15.1, 2024-06-27
+
+* Remove deepspeed from requirements.txt, it's too complex for typical users. A more detailed deepspeed install document will be required.
+
 Version 0.15.0, 2024-06-26
 
 * Switch to [coqui-tts](https://github.com/idiap/coqui-ai-TTS) (updated fork), updated simpler dependencies, torch 2.3, etc.
