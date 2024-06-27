@@ -29,6 +29,10 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version 0.14.1, 2024-06-26
+
+* Make deepspeed possible (`--use-deepspeed`), but not enabled in pre-built docker images (too large). Requires the cuda-toolkit installed, see the Dockerfile comment for details
+
 Version 0.14.0, 2024-06-26
 
 * Added `response_format`: `wav` and `pcm` support
