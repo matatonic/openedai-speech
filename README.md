@@ -10,7 +10,7 @@ An OpenAI API compatible text to speech server.
 Full Compatibility:
 * `tts-1`: `alloy`, `echo`, `fable`, `onyx`, `nova`, and `shimmer` (configurable)
 * `tts-1-hd`:  `alloy`, `echo`, `fable`, `onyx`, `nova`, and `shimmer` (configurable, uses OpenAI samples by default)
-* response_format: `mp3`, `opus`, `aac`, or `flac`
+* response_format: `mp3`, `opus`, `aac`, `flac`, `wav` and `pcm`
 * speed 0.25-4.0 (and more)
 
 Details:
@@ -20,12 +20,22 @@ Details:
   * Custom cloned voices can be used for tts-1-hd, See: [Custom Voices Howto](#custom-voices-howto)
   * 🌐 [Multilingual](#multilingual) support with XTTS voices
   * [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
+  * Configurable [generation parameters](#generation-parameters)
+  * Streamed output while generating
 * Occasionally, certain words or symbols may sound incorrect, you can fix them with regex via `pre_process_map.yaml`
 
 
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
 ## Recent Changes
+
+Version 0.14.0, 2024-06-26
+
+* Added `response_format`: `wav` and `pcm` support
+* Output streaming (while generating) for `tts-1` and `tts-1-hd`
+* Enhanced [generation parameters](#generation-parameters) for xtts models (temperature, top_p, etc.)
+* Idle unload timer (optional) - doesn't work perfectly yet
+* Improved error handling
 
 Version 0.13.0, 2024-06-25
 
@@ -313,3 +323,21 @@ tts-1-hd:
     model_path: voices/halo
 ```
 3) The model will be loaded when you access the voice for the first time (`--preload` doesn't work with custom models yet)
+
+## Generation Parameters
+
+The generation of XTTSv2 voices can be fine tuned with the following options (defaults included below):
+
+```yaml
+tts-1-hd:
+  alloy:
+    model: xtts
+    speaker: voices/alloy.wav
+    enable_text_splitting: True
+    length_penalty: 1.0
+    repetition_penalty: 10
+    speed: 1.0
+    temperature: 0.75
+    top_k: 50
+    top_p: 0.85
+```

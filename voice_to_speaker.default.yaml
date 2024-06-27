@@ -48,3 +48,11 @@ tts-1-hd:
   me:
     model: xtts_v2.0.2 # you can specify different xtts version
     speaker: voices/me.wav # this could be you
+    enable_text_splitting: True
+    length_penalty: 1.0
+    repetition_penalty: 10
+    speed: 1.0
+    temperature: 0.75
+    top_k: 50
+    top_p: 0.85
+    comment: You can add a comment here also, which will be persistent and otherwise ignored.
