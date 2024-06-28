@@ -31,7 +31,7 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 Version 0.15.2, 2024-06-28
 
-* Thread safe version, locked generation at the sentence level
+* Thread safe version, with audio generation synchronized at the sentence level. The estimated 'realtime' factor of XTTS of roughly 1/3, this means that multiple streams simultaneously, or `speed` over 2, may experience audio underrun (ie. delays in playback)
 
 Version 0.15.1, 2024-06-27
 
