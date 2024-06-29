@@ -34,7 +34,6 @@ Version 0.16.0, 2024-06-29
 
 * Multi-client safe version. Audio generation is synchronized in a single process. The estimated 'realtime' factor of XTTS on a GPU is roughly 1/3, this means that multiple streams simultaneously, or `speed` over 2, may experience audio underrun (delays or pauses in playback). This makes multiple clients possible and safe, but in practice 2 or 3 simultaneous streams is the maximum without audio underrun.
 
-
 Version 0.15.1, 2024-06-27
 
 * Remove deepspeed from requirements.txt, it's too complex for typical users. A more detailed deepspeed install document will be required.
