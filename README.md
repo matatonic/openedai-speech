@@ -254,7 +254,11 @@ tts-1:
 ```
   3. New models will be downloaded as needed, of you can download them in advance with `download_voices_tts-1.sh`. For example:
 ```shell
-bash download_voices_tts-1.sh en_US-ryan-high
+$ bash download_voices_tts-1.sh en_US-ryan-high
+INFO:piper.download:Downloaded voices/en_US-ryan-high.onnx.json (https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/ryan/high/en_US-ryan-high.onnx.json)
+INFO:piper.download:Downloaded voices/en_US-ryan-high.onnx (https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/ryan/high/en_US-ryan-high.onnx)
+$ ls voices/en_US-ryan-high.onnx*
+voices/en_US-ryan-high.onnx.json  voices/en_US-ryan-high.onnx
 ```
 
 ### Coqui XTTS v2
