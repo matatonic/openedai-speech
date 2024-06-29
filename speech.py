@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-import asyncio
 import contextlib
 import gc
-import io
 import os
 import queue
 import re
@@ -73,12 +71,8 @@ class xtts_wrapper():
 
         if self.unload_timer:
             logger.info(f"Setting unload timer to {self.unload_timer} seconds")
-            self.not_idle()
-            self.check_idle()
-
-    def not_idle(self):
-        with self.lock:
             self.last_used = time.time()
+            self.check_idle()
 
     def check_idle(self):
         with self.lock:
@@ -92,21 +86,27 @@ class xtts_wrapper():
                 self.timer.start()
 
     def tts(self, text, language, speaker_wav, **hf_generate_kwargs):
-        logger.debug(f"waiting lock")
-        with self.lock, torch.no_grad(): # I wish this could be another way, but it seems that inference_stream cannot be access async reliably
-            logger.debug(f"grabbed lock, tts text: {text}")
+        with torch.no_grad():
             self.last_used = time.time()
+            tokens = 0
             try:
-                gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=[speaker_wav]) # XXX TODO: allow multiple wav
+                with self.lock:
+                    gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=[speaker_wav]) # not worth caching calls, it's < 0.001s after model is loaded
+                    pcm_stream = self.xtts.inference_stream(text, language, gpt_cond_latent, speaker_embedding, **hf_generate_kwargs)
+                    self.last_used = time.time()
 
-                for wav in self.xtts.inference_stream(text, language, gpt_cond_latent, speaker_embedding, **hf_generate_kwargs):
-                    yield wav.cpu().numpy().tobytes()
+                while True:
+                    with self.lock:
+                        yield next(pcm_stream).cpu().numpy().tobytes()
+                        self.last_used = time.time()
+                    tokens += 1
+
+            except StopIteration:
+                pass
 
             finally:
-                logger.debug(f"held lock for {time.time() - self.last_used:0.1f} sec")
+                logger.debug(f"Generated {tokens} tokens in {time.time() - self.last_used:.2f}s @ {tokens / (time.time() - self.last_used):.2f} T/s")
                 self.last_used = time.time()
-
-
 
 def default_exists(filename: str):
     if not os.path.exists(filename):
@@ -203,13 +203,12 @@ async def generate_speech(request: GenerateSpeechRequest):
     elif response_format == "pcm":
         if model == 'tts-1': # piper
             media_type = "audio/pcm;rate=22050"
-        elif model == 'tts-1-hd':
+        elif model == 'tts-1-hd': # xtts
             media_type = "audio/pcm;rate=24000"
     else:
         raise BadRequestError(f"Invalid response_format: '{response_format}'", param='response_format')
 
     ffmpeg_args = None
-    tts_io_out = None
 
     # Use piper for tts-1, and if xtts_device == none use for all models.
     if model == 'tts-1' or args.xtts_device == 'none':
@@ -289,76 +288,8 @@ async def generate_speech(request: GenerateSpeechRequest):
 
         ffmpeg_proc = subprocess.Popen(ffmpeg_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
-        # before the xtts lock, it was:
-        #def generator():
-        #    for chunk in xtts.tts(text=input_text, language=language, speaker_wav=speaker, **hf_generate_kwargs):
-        #        ffmpeg_proc.stdin.write(chunk) # <-- but this blocks forever and holds the xtts lock if a client disconnects
-        #worker = threading.Thread(target=generator)
-        #worker.daemon = True
-        #worker.start()
-        #return StreamingResponse(content=ffmpeg_proc.stdout, media_type=media_type)
-        # 
-        # What follows is stupidly overcomplicated, but there is no other way I can find (yet) that detects client disconnects and not get blocked up 
-    
-        os.set_blocking(ffmpeg_proc.stdout.fileno(), False) # this doesn't work on windows until python 3.12
-        os.set_blocking(ffmpeg_proc.stdin.fileno(), False) # this doesn't work on windows until python 3.12
-        ffmpeg_in = io.FileIO(ffmpeg_proc.stdin.fileno(), 'wb')
-
         in_q = queue.Queue() # speech pcm 
-        out_q = queue.Queue() # ffmpeg audio out
         ex_q = queue.Queue() # exceptions
-
-        def ffmpeg_io():
-            # in_q -> ffmopeg -> out_q
-            while not (ffmpeg_proc.stdout.closed and ffmpeg_proc.stdin.closed):
-                try:
-                    while not ffmpeg_proc.stdout.closed:
-                        chunk = ffmpeg_proc.stdout.read()
-                        if chunk is None:
-                            break
-
-                        if len(chunk) == 0: # real end
-                            out_q.put(None)
-                            ffmpeg_proc.stdout.close()
-                            break
-
-                        out_q.put(chunk)
-                        continue # consume audio without delay
-
-                except Exception as e:
-                    logger.debug(f"ffmpeg stdout read: {repr(e)}")
-                    out_q.put(None)
-                    ex_q.put(e)
-                    return
-
-                try:
-                    while not ffmpeg_proc.stdin.closed:
-                        chunk = in_q.get_nowait()
-                        if chunk is None:
-                            ffmpeg_proc.stdin.close()
-                            break
-                        n = ffmpeg_in.write(chunk) # BrokenPipeError from here on client disconnect
-                        if n is None:
-                            in_q.queue.appendleft(chunk)
-                            break
-                        if n != len(chunk):
-                            in_q.queue.appendleft(chunk[n:])
-                            break
-
-                except queue.Empty:
-                    pass
-
-                except BrokenPipeError as e:
-                    ex_q.put(e) # we need to get this exception into the generation loop, which holds the lock
-                    ffmpeg_proc.kill()
-                    return
-
-                except Exception as e:
-                    ex_q.put(e)
-                    ffmpeg_proc.kill()
-                    return
-
-                time.sleep(0.01)
 
         def exception_check(exq: queue.Queue):
             try:
@@ -376,56 +307,45 @@ async def generate_speech(request: GenerateSpeechRequest):
                         exception_check(ex_q)
                         in_q.put(chunk)
 
-                in_q.put(None)
-
             except BrokenPipeError as e: # client disconnect lands here
-                #logger.debug(f"{repr(e)}")
-                logger.info("Client disconnected")
-
-            except asyncio.CancelledError as e:
-                logger.debug(f"{repr(e)}")
-                pass
+                logger.info("Client disconnected - 'Broken pipe'")
 
             except Exception as e:
                 logger.error(f"Exception: {repr(e)}")
                 raise e
+        
+            finally:
+                in_q.put(None) # sentinel
 
-        worker = threading.Thread(target=generator, daemon = True)
-        worker.start()
+        def out_writer(): 
+            # in_q -> ffmpeg
+            try:
+                while True:
+                    chunk = in_q.get()
+                    if chunk is None: # sentinel
+                        break
+                    ffmpeg_proc.stdin.write(chunk) # BrokenPipeError from here on client disconnect
 
-        worker2 = threading.Thread(target=ffmpeg_io, daemon = True)
-        worker2.start()
-
-        async def audio_out():
-            # out_q -> client
-            while True:
-                try:
-                    audio = out_q.get_nowait()
-                    if audio is None:
-                        return
-                    yield audio
-
-                except queue.Empty:
-                    pass
-
-                except asyncio.CancelledError as e:
-                    logger.debug("{repr(e)}")
-                    ex_q.put(e)
-                    return
-                
-                except Exception as e:
-                    logger.debug("{repr(e)}")
-                    ex_q.put(e)
-                    return
+            except Exception as e: # BrokenPipeError
+                ex_q.put(e)  # we need to get this exception into the generation loop
+                ffmpeg_proc.kill()
+                return
             
-                await asyncio.sleep(0.01)
+            finally:
+                ffmpeg_proc.stdin.close()
+
+        generator_worker = threading.Thread(target=generator, daemon=True)
+        generator_worker.start()
+
+        out_writer_worker = threading.Thread(target=out_writer, daemon=True)
+        out_writer_worker.start()
 
         def cleanup():
             ffmpeg_proc.kill()
-            del worker
-            del worker2
+            del generator_worker
+            del out_writer_worker
 
-        return StreamingResponse(audio_out(), media_type=media_type, background=cleanup)
+        return StreamingResponse(content=ffmpeg_proc.stdout, media_type=media_type, background=cleanup)
     else:
         raise BadRequestError("No such model, must be tts-1 or tts-1-hd.", param='model')
 
@@ -448,6 +368,7 @@ if __name__ == "__main__":
     parser.add_argument('--preload', action='store', default=None, help="Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use.")
     parser.add_argument('--unload-timer', action='store', default=None, type=int, help="Idle unload timer for the XTTS model in seconds, Ex. 900 for 15 minutes")
     parser.add_argument('--use-deepspeed', action='store_true', default=False, help="Use deepspeed with xtts (this option is unsupported)")
+    parser.add_argument('--no-cache-speaker', action='store_true', default=False, help="Don't use the speaker wav embeddings cache")
     parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")
     parser.add_argument('-H', '--host', action='store', default='0.0.0.0', help="Host to listen on, Ex. 0.0.0.0")
     parser.add_argument('-L', '--log-level', default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the log level")
