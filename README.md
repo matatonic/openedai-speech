@@ -252,7 +252,7 @@ tts-1:
     model: voices/en_US-ryan-high.onnx
     speaker: # default speaker
 ```
-  3. New models will be downloaded as needed, of you can download them in advance with `download_voices_tts-1.sh`. For example:
+  3. New models will be downloaded as needed, or you can download them in advance with `download_voices_tts-1.sh`. For example:
 ```shell
 $ bash download_voices_tts-1.sh en_US-ryan-high
 INFO:piper.download:Downloaded voices/en_US-ryan-high.onnx.json (https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/ryan/high/en_US-ryan-high.onnx.json)
