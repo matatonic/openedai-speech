@@ -46,8 +46,9 @@ tts-1-hd:
     model: xtts
     speaker: voices/shimmer.wav
   me:
-    model: xtts_v2.0.2 # you can specify different xtts version
+    model: xtts_v2.0.2 # you can specify an older xtts version
     speaker: voices/me.wav # this could be you
+    language: auto
     enable_text_splitting: True
     length_penalty: 1.0
     repetition_penalty: 10

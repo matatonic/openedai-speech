@@ -30,6 +30,11 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version 0.17.1, 2024-07-01
+
+* fix ROCm (add langdetect to requirements-rocm.txt)
+* Fix zh-cn for xtts
+
 Version 0.17.0, 2024-07-01
 
 * Automatic language detection, thanks [@RodolfoCastanheira](https://github.com/RodolfoCastanheira)

@@ -296,7 +296,11 @@ async def generate_speech(request: GenerateSpeechRequest):
         hf_generate_kwargs['enable_text_splitting'] = hf_generate_kwargs.get('enable_text_splitting', True) # change the default to true
 
         if hf_generate_kwargs['enable_text_splitting']:
-            all_text = split_sentence(input_text, language, xtts.xtts.tokenizer.char_limits[language])
+            if language == 'zh-cn':
+                split_lang = 'zh'
+            else:
+                split_lang = language
+            all_text = split_sentence(input_text, split_lang, xtts.xtts.tokenizer.char_limits[split_lang])
         else:
             all_text = [input_text]
 
