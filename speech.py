@@ -16,7 +16,7 @@ from loguru import logger
 from openedai import OpenAIStub, BadRequestError, ServiceUnavailableError
 from pydantic import BaseModel
 import uvicorn
-
+from langdetect import detect
 
 @contextlib.asynccontextmanager
 async def lifespan(app):
@@ -270,7 +270,21 @@ async def generate_speech(request: GenerateSpeechRequest):
         # Pipe the output from piper/xtts to the input of ffmpeg
         ffmpeg_args.extend(["-"])
 
-        language = voice_map.pop('language', 'en')
+        language = voice_map.pop('language', 'auto')
+        if language == 'auto':
+            try:
+                language = detect(input_text)
+                if language not in [
+                    'en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr',
+                    'ru', 'nl', 'cs', 'ar', 'zh-cn', 'hu', 'ko', 'ja', 'hi'
+                ]:
+                    logger.debug(f"Detected language {language} not supported, defaulting to en")
+                    language = 'en'
+                else:
+                    logger.debug(f"Detected language: {language}")
+            except:
+                language = 'en'
+                logger.debug(f"Failed to detect language, defaulting to en")
 
         comment = voice_map.pop('comment', None) # ignored.
 
