@@ -16,7 +16,6 @@ from loguru import logger
 from openedai import OpenAIStub, BadRequestError, ServiceUnavailableError
 from pydantic import BaseModel
 import uvicorn
-from langdetect import detect
 
 @contextlib.asynccontextmanager
 async def lifespan(app):
@@ -405,6 +404,7 @@ if __name__ == "__main__":
         from TTS.tts.models.xtts import Xtts
         from TTS.utils.manage import ModelManager
         from TTS.tts.layers.xtts.tokenizer import split_sentence
+        from langdetect import detect
 
     if args.preload:
         xtts = xtts_wrapper(args.preload, device=args.xtts_device, unload_timer=args.unload_timer)
