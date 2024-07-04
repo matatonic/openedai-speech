@@ -172,7 +172,7 @@ docker compose up
 #### AMD GPU (ROCm support)
 
 ```shell
-docker compose -d docker-compose.rocm.yml up
+docker compose -f docker-compose.rocm.yml up -d
 ```
 
 #### ARM64 (Apple M-series, Raspberry Pi)
