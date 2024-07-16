@@ -17,7 +17,6 @@ from openedai import OpenAIStub, BadRequestError, ServiceUnavailableError
 from pydantic import BaseModel
 import uvicorn
 
-
 @contextlib.asynccontextmanager
 async def lifespan(app):
     yield
@@ -270,7 +269,21 @@ async def generate_speech(request: GenerateSpeechRequest):
         # Pipe the output from piper/xtts to the input of ffmpeg
         ffmpeg_args.extend(["-"])
 
-        language = voice_map.pop('language', 'en')
+        language = voice_map.pop('language', 'auto')
+        if language == 'auto':
+            try:
+                language = detect(input_text)
+                if language not in [
+                    'en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr',
+                    'ru', 'nl', 'cs', 'ar', 'zh-cn', 'hu', 'ko', 'ja', 'hi'
+                ]:
+                    logger.debug(f"Detected language {language} not supported, defaulting to en")
+                    language = 'en'
+                else:
+                    logger.debug(f"Detected language: {language}")
+            except:
+                language = 'en'
+                logger.debug(f"Failed to detect language, defaulting to en")
 
         comment = voice_map.pop('comment', None) # ignored.
 
@@ -282,7 +295,11 @@ async def generate_speech(request: GenerateSpeechRequest):
         hf_generate_kwargs['enable_text_splitting'] = hf_generate_kwargs.get('enable_text_splitting', True) # change the default to true
 
         if hf_generate_kwargs['enable_text_splitting']:
-            all_text = split_sentence(input_text, language, xtts.xtts.tokenizer.char_limits[language])
+            if language == 'zh-cn':
+                split_lang = 'zh'
+            else:
+                split_lang = language
+            all_text = split_sentence(input_text, split_lang, xtts.xtts.tokenizer.char_limits[split_lang])
         else:
             all_text = [input_text]
 
@@ -387,6 +404,7 @@ if __name__ == "__main__":
         from TTS.tts.models.xtts import Xtts
         from TTS.utils.manage import ModelManager
         from TTS.tts.layers.xtts.tokenizer import split_sentence
+        from langdetect import detect
 
     if args.preload:
         xtts = xtts_wrapper(args.preload, device=args.xtts_device, unload_timer=args.unload_timer)

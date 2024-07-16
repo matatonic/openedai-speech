@@ -3,6 +3,7 @@ uvicorn
 loguru
 piper-tts
 coqui-tts
+langdetect
 # Creating an environment where deepspeed works is complex, for now it will be disabled by default.
 #deepspeed
 torch; --index-url https://download.pytorch.org/whl/rocm5.7; sys_platform == "linux"

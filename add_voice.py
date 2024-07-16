@@ -11,8 +11,8 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 
 parser.add_argument('sample', action='store', help="Set the wav sample file")
 parser.add_argument('-n', '--name', action='store', help="Set the name for the voice (by default will use the WAV file name)")
-parser.add_argument('-l', '--language', action='store', default="en", help="Set the language for the voice",
-                    choices=['en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr', 'ru', 'nl', 'cs', 'ar', 'zh-cn', 'ja', 'hu', 'ko'])
+parser.add_argument('-l', '--language', action='store', default="auto", help="Set the language for the voice",
+                    choices=['auto', 'en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr', 'ru', 'nl', 'cs', 'ar', 'zh-cn', 'ja', 'hu', 'ko', 'hi'])
 parser.add_argument('--openai-model', action='store', default="tts-1-hd", help="Set the openai model for the voice")
 parser.add_argument('--xtts-model', action='store', default="xtts", help="Set the xtts model for the voice (if using a custom model, also set model_path)")
 parser.add_argument('--model-path', action='store', default=None, help="Set the path for a custom xtts model")

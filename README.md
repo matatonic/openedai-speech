@@ -18,7 +18,7 @@ Details:
   * You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) via the `voice_to_speaker.yaml` configuration file
 * Model `tts-1-hd` via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, but requires around 4GB GPU VRAM)
   * Custom cloned voices can be used for tts-1-hd, See: [Custom Voices Howto](#custom-voices-howto)
-  * 🌐 [Multilingual](#multilingual) support with XTTS voices
+  * 🌐 [Multilingual](#multilingual) support with XTTS voices, the language is automatically detected if not set
   * [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
   * Configurable [generation parameters](#generation-parameters)
   * Streamed output while generating
@@ -29,6 +29,19 @@ Details:
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
 ## Recent Changes
+
+Version 0.17.2, 2024-07-01
+
+* fix -min image (re: langdetect)
+
+Version 0.17.1, 2024-07-01
+
+* fix ROCm (add langdetect to requirements-rocm.txt)
+* Fix zh-cn for xtts
+
+Version 0.17.0, 2024-07-01
+
+* Automatic language detection, thanks [@RodolfoCastanheira](https://github.com/RodolfoCastanheira)
 
 Version 0.16.0, 2024-06-29
 
@@ -58,7 +71,7 @@ Version 0.14.0, 2024-06-26
 Version 0.13.0, 2024-06-25
 
 * Added [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
-* Initial prebuilt arm64 image support (Apple M-series, Raspberry Pi - MPS is not supported in XTTS/torch), thanks @JakeStevenson, @hchasens
+* Initial prebuilt arm64 image support (Apple M-series, Raspberry Pi - MPS is not supported in XTTS/torch), thanks [@JakeStevenson](https://github.com/JakeStevenson), [@hchasens](https://github.com/hchasens)
 * Initial attempt at AMD GPU (ROCm 5.7) support
 * Parler-tts support removed
 * Move the *.default.yaml to the root folder
@@ -88,7 +101,7 @@ Version 0.11.0, 2024-05-29
 
 Version: 0.10.1, 2024-05-05
 
-* Remove `runtime: nvidia` from docker-compose.yml, this assumes nvidia/cuda compatible runtime is available by default. thanks @jmtatsch
+* Remove `runtime: nvidia` from docker-compose.yml, this assumes nvidia/cuda compatible runtime is available by default. thanks [@jmtatsch](https://github.com/jmtatsch)
 
 Version: 0.10.0, 2024-04-27
 
@@ -318,7 +331,7 @@ tts-1-hd:
 
 Multilingual cloning support was added in version 0.11.0 and is available only with the XTTS v2 model. To use multilingual voices with piper simply download a language specific voice.
 
-Coqui XTTSv2 has support for 16 languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Italian (`it`), Portuguese (`pt`), Polish (`pl`), Turkish (`tr`), Russian (`ru`), Dutch (`nl`), Czech (`cs`), Arabic (`ar`), Chinese (`zh-cn`), Japanese (`ja`), Hungarian (`hu`) and Korean (`ko`).
+Coqui XTTSv2 has support for multiple languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Italian (`it`), Portuguese (`pt`), Polish (`pl`), Turkish (`tr`), Russian (`ru`), Dutch (`nl`), Czech (`cs`), Arabic (`ar`), Chinese (`zh-cn`), Hungarian (`hu`), Korean (`ko`), Japanese (`ja`), and Hindi (`hi`). When not set, an attempt will be made to automatically detect the language, falling back to English (`en`).
 
 Unfortunately the OpenAI API does not support language, but you can create your own custom speaker voice and set the language for that.
 
