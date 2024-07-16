@@ -127,7 +127,7 @@ TTS_HOME=voices
 HF_HOME=voices
 #PRELOAD_MODEL=xtts
 #PRELOAD_MODEL=xtts_v2.0.2
-#EXTRA_ARGS=--log-level DEBUG
+#EXTRA_ARGS=--log-level DEBUG --unload-timer 300
 #USE_ROCM=1
 ```
 
@@ -159,7 +159,7 @@ docker compose up
 #### AMD GPU (ROCm support)
 
 ```shell
-docker compose -d docker-compose.rocm.yml up
+docker compose -f docker-compose.rocm.yml up
 ```
 
 #### ARM64 (Apple M-series, Raspberry Pi)
@@ -172,6 +172,29 @@ docker compose -d docker-compose.rocm.yml up
 
 ```shell
 docker compose -f docker-compose.min.yml up
+```
+
+## Server Options
+
+```shell
+usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [--unload-timer UNLOAD_TIMER] [--use-deepspeed] [--no-cache-speaker] [-P PORT] [-H HOST]
+                 [-L {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+
+OpenedAI Speech API Server
+
+options:
+  -h, --help            show this help message and exit
+  --xtts_device XTTS_DEVICE
+                        Set the device for the xtts model. The special value of 'none' will use piper for all models. (default: cuda)
+  --preload PRELOAD     Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use. (default: None)
+  --unload-timer UNLOAD_TIMER
+                        Idle unload timer for the XTTS model in seconds, Ex. 900 for 15 minutes (default: None)
+  --use-deepspeed       Use deepspeed with xtts (this option is unsupported) (default: False)
+  --no-cache-speaker    Don't use the speaker wav embeddings cache (default: False)
+  -P PORT, --port PORT  Server tcp port (default: 8000)
+  -H HOST, --host HOST  Host to listen on, Ex. 0.0.0.0 (default: 0.0.0.0)
+  -L {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        Set the log level (default: INFO)
 ```
 
 
