@@ -84,13 +84,13 @@ class xtts_wrapper():
                 self.timer.daemon = True
                 self.timer.start()
 
-    def tts(self, text, language, speaker_wav, **hf_generate_kwargs):
+    def tts(self, text, language, audio_paths: list[str], **hf_generate_kwargs):
         with torch.no_grad():
             self.last_used = time.time()
             tokens = 0
             try:
                 with self.lock:
-                    gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=[speaker_wav]) # not worth caching calls, it's < 0.001s after model is loaded
+                    gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=audio_paths) # not worth caching calls, it's < 0.001s after model is loaded
                     pcm_stream = self.xtts.inference_stream(text, language, gpt_cond_latent, speaker_embedding, **hf_generate_kwargs)
                     self.last_used = time.time()
 
@@ -316,11 +316,39 @@ async def generate_speech(request: GenerateSpeechRequest):
             
             raise e
 
+        def is_file_path(path: str) -> bool:
+            """Determines if a path is a file, as opposed to a direcory."""
+            file_name_regex = r'\.\w+$'
+            return bool(re.search(file_name_regex, path))
+
+        def is_directory(path: str) -> bool:
+            """Determine if a path is a directory, as opposed to a file."""
+            return not is_file_path(path)
+
+        def remove_trailing_slashes(s: str) -> str:
+            """Remove any trailing forward or backward slahes from a string."""
+            return re.sub(r'[\\/]+$', '', s)
+
+        def get_speaker_samples(path: str) -> list[str]:
+            """Get and validate the files determined by the inputted speaker config."""
+
+            if is_directory(path):
+                path = remove_trailing_slashes(speaker)
+
+            speaker_samples = [f'{path}/{file}' for file in os.listdir(path)] if is_directory(path) else [path]
+            for speaker_sample in speaker_samples:
+                if not is_file_path(speaker_sample):
+                    raise Exception("Speaker path must be a file or a directory containing files.")
+            return speaker_samples
+
         def generator():
             # text -> in_q
+
+            speaker_samples = get_speaker_samples(speaker)
+
             try:
                 for text in all_text:
-                    for chunk in xtts.tts(text=text, language=language, speaker_wav=speaker, **hf_generate_kwargs):
+                    for chunk in xtts.tts(text=text, language=language, audio_paths=speaker_samples, **hf_generate_kwargs):
                         exception_check(ex_q)
                         in_q.put(chunk)
 
