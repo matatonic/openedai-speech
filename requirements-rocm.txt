@@ -2,7 +2,7 @@ fastapi
 uvicorn
 loguru
 piper-tts
-coqui-tts
+coqui-tts[languages]
 langdetect
 # Creating an environment where deepspeed works is complex, for now it will be disabled by default.
 #deepspeed
