@@ -33,6 +33,7 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 Version 0.18.0, 2024-08-15
 
 * Allow folders of wav samples in xtts. Samples will be combined, allowing for mixed voices and collections of small samples. Still limited to 30 seconds total. Thanks @nathanhere.
+* Fix missing yaml requirement in -min image
 
 Version 0.17.3, 2024-08-15
 
