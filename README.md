@@ -30,6 +30,10 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version 0.18.0, 2024-08-15
+
+* Allow folders of wav samples in xtts. Samples will be combined, allowing for mixed voices and collections of small samples. Still limited to 30 seconds total. Thanks @nathanhere.
+
 Version 0.17.3, 2024-08-15
 
 * fix fr_FR-tom-medium and other 44khz piper voices (detect non-default sample rates)
@@ -308,6 +312,7 @@ Coqui XTTS v2 voice cloning can work with as little as 6 seconds of clear audio.
 * low noise (no hiss or hum)
 * No partial words, breathing, laughing, music or backgrounds sounds
 * An even speaking pace with a variety of words is best, like in interviews or audiobooks.
+* Audio longer than 30 seconds will be silently truncated.
 
 You can use FFmpeg to prepare your audio files, here are some examples:
 
@@ -331,6 +336,20 @@ tts-1-hd:
     model: xtts
     speaker: voices/me.wav # this could be you
 ```
+
+You can also use a sub folder for multiple audio samples to combine small samples or to mix different samples together.
+
+For example:
+
+```yaml
+...
+tts-1-hd:
+  mixed:
+    model: xtts
+    speaker: voices/mixed
+```
+
+Where the `voices/mixed/` folder contains multiple wav files. The total audio length is still limited to 30 seconds.
 
 ## Multilingual
 

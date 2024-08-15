@@ -85,7 +85,7 @@ class xtts_wrapper():
                 self.timer.daemon = True
                 self.timer.start()
 
-    def tts(self, text, language, speaker_wav, **hf_generate_kwargs):
+    def tts(self, text, language, audio_path, **hf_generate_kwargs):
         with torch.no_grad():
             self.last_used = time.time()
             tokens = 0
@@ -93,7 +93,7 @@ class xtts_wrapper():
                 with self.lock:
                     logger.debug(f"generating [{language}]: {[text]}")
 
-                    gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=[speaker_wav]) # not worth caching calls, it's < 0.001s after model is loaded
+                    gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=audio_path) # not worth caching calls, it's < 0.001s after model is loaded
                     pcm_stream = self.xtts.inference_stream(text, language, gpt_cond_latent, speaker_embedding, **hf_generate_kwargs)
                     self.last_used = time.time()
 
@@ -319,6 +319,21 @@ async def generate_speech(request: GenerateSpeechRequest):
         in_q = queue.Queue() # speech pcm 
         ex_q = queue.Queue() # exceptions
 
+        def get_speaker_samples(samples: str) -> list[str]:
+            if os.path.isfile(samples):
+                audio_path = [samples]
+            elif os.path.isdir(samples):
+                audio_path = [os.path.join(samples, sample) for sample in os.listdir(samples) if os.path.isfile(os.path.join(samples, sample))]
+
+                if len(audio_path) < 1:
+                    logger.error(f"No files found: {samples}")
+                    raise ServiceUnavailableError(f"Invalid path: {samples}")
+            else:
+                logger.error(f"Invalid path: {samples}")
+                raise ServiceUnavailableError(f"Invalid path: {samples}")
+            
+            return audio_path
+
         def exception_check(exq: queue.Queue):
             try:
                 e = exq.get_nowait()
@@ -329,9 +344,13 @@ async def generate_speech(request: GenerateSpeechRequest):
 
         def generator():
             # text -> in_q
+
+            audio_path = get_speaker_samples(speaker)
+            logger.debug(f"{voice} wav samples: {audio_path}")
+
             try:
                 for text in all_text:
-                    for chunk in xtts.tts(text=text, language=language, speaker_wav=speaker, **hf_generate_kwargs):
+                    for chunk in xtts.tts(text=text, language=language, audio_path=audio_path, **hf_generate_kwargs):
                         exception_check(ex_q)
                         in_q.put(chunk)
 
