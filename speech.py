@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 import yaml
+import json
 
 from fastapi.responses import StreamingResponse
 from loguru import logger
@@ -90,6 +91,8 @@ class xtts_wrapper():
             tokens = 0
             try:
                 with self.lock:
+                    logger.debug(f"generating [{language}]: {[text]}")
+
                     gpt_cond_latent, speaker_embedding = self.xtts.get_conditioning_latents(audio_path=[speaker_wav]) # not worth caching calls, it's < 0.001s after model is loaded
                     pcm_stream = self.xtts.inference_stream(text, language, gpt_cond_latent, speaker_embedding, **hf_generate_kwargs)
                     self.last_used = time.time()
@@ -230,7 +233,15 @@ async def generate_speech(request: GenerateSpeechRequest):
         tts_proc.stdin.write(bytearray(input_text.encode('utf-8')))
         tts_proc.stdin.close()
 
-        ffmpeg_args = build_ffmpeg_args(response_format, input_format="s16le", sample_rate="22050")
+        try:
+            with open(f"{piper_model}.json", 'r') as pvc_f:
+                conf = json.load(pvc_f)
+                sample_rate = str(conf['audio']['sample_rate'])
+
+        except:
+            sample_rate = '22050'
+  
+        ffmpeg_args = build_ffmpeg_args(response_format, input_format="s16le", sample_rate=sample_rate)
 
         # Pipe the output from piper/xtts to the input of ffmpeg
         ffmpeg_args.extend(["-"])
