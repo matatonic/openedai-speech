@@ -30,6 +30,11 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version 0.17.3, 2024-08-15
+
+* fix fr_FR-tom-medium and other 44khz piper voices (detect non-default sample rates)
+* minor updates
+
 Version 0.17.2, 2024-07-01
 
 * fix -min image (re: langdetect)

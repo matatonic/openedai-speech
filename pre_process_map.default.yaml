@@ -31,7 +31,6 @@
   - ' F.Y. '
 - - ([0-9]+)-([0-9]+)
   - \1 to \2
-- - ([0-9]+)[\s]*\*[\s]*([0-9]+)
-  - \1 times \2
-- - '\*'
-  - ''
+# xtts has a lot of trouble with these, but piper is fine.
+#- - '[\*=+-]+'
+#  - ' '
