@@ -147,7 +147,7 @@ jobs:
           labels: version=${{ github.run_id }}
           platforms: linux/amd64,linux/arm64
 
-build-and-push-image-rocm:
+  build-and-push-image-rocm:
     runs-on: ubuntu-latest
 
     permissions:
