@@ -30,6 +30,10 @@ If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know s
 
 ## Recent Changes
 
+Version 0.18.2, 2024-08-16
+
+* Fix docker building for amd64, refactor github actions again, free up more disk space
+
 Version 0.18.1, 2024-08-15
 
 * refactor github actions
