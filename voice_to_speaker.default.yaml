@@ -1,54 +1,73 @@
 ﻿tts-1:
-  some_other_voice_name_you_want:
-    model: voices/choose your own model.onnx
+  my_fine_tune: # Add your own fine tuned piper model
+    model: voices/my_fine_tune.onnx # this model will always be chosen
     speaker: set your own speaker
+    language: en # Set the language to skip language detection
   alloy:
-    model: voices/en_US-libritts_r-medium.onnx
-    speaker: 79 # 64, 79, 80, 101, 130
+    language: auto # If you don't set a specific language, the language will be auto detected
+    # When using language "auto", any detected languages missing a voice will have a voice automatically chosen and downloaded if needed
+    # if you don't like the automatically chosen voices, you can select and configure your own language entries
+    # Here are some samples which provide better defaults for the 'alloy' voice
+    en:
+      model: en_US-libritts_r-medium # This model will be automatically downloaded it it doesn't exist yet
+      speaker: 79 # 64, 79, 80, 101, 130
+    es:
+      model: es_MX-claude-high
+    de:
+      model: de_DE-mls-medium
+      speaker: 14
+    fr:
+      model: fr_FR-siwis-medium
+    uk:
+      model: uk_UA-ukrainian_tts-medium
+      speaker: 2
+    ru:
+      model: ru_RU-irina-medium
   echo:
-    model: voices/en_US-libritts_r-medium.onnx
-    speaker: 134 # 52, 102, 134
-  echo-alt:
-    model: voices/en_US-ryan-high.onnx
-    speaker: # default speaker
+    en:
+      model: en_US-libritts_r-medium # en_US-ryan-high
+      speaker: 134 # 34
   fable:
-    model: voices/en_GB-northern_english_male-medium.onnx
-    speaker: # default speaker
+    en:
+      model: en_GB-aru-medium
+      speaker: 8
   onyx:
-    model: voices/en_US-libritts_r-medium.onnx
-    speaker: 159 # 55, 90, 132, 136, 137, 159
+    en:
+      model: en_US-libritts_r-medium
+      speaker: 159 # 55, 90, 132, 136, 137, 159
+    de:
+      model: de_DE-mls-medium
+      speaker: 14
   nova:
-    model: voices/en_US-libritts_r-medium.onnx
-    speaker: 107 # 57, 61, 107, 150, 162
+    en:
+      model: en_US-libritts_r-medium
+      speaker: 107 # 57, 61, 107, 150, 162
   shimmer:
-    model: voices/en_US-libritts_r-medium.onnx
-    speaker: 163
+    en:
+      model: en_US-libritts_r-medium
+      speaker: 163
+  auto: # Everything automatic, language & model are auto-detected.
 tts-1-hd:
-  alloy-alt:
-    model: xtts
-    speaker: voices/alloy-alt.wav
-  alloy:
-    model: xtts
-    speaker: voices/alloy.wav
-  echo:
-    model: xtts
-    speaker: voices/echo.wav
-  fable:
-    model: xtts
-    speaker: voices/fable.wav
-  onyx:
-    model: xtts
-    speaker: voices/onyx.wav
-  nova:
-    model: xtts
-    speaker: voices/nova.wav
-  shimmer:
-    model: xtts
-    speaker: voices/shimmer.wav
+  # Default openai voices alloy, echo, sky, etc. are added automatically after downloading the sample wav files to the voices/ folder
+  # Any wav files in the voices/ folder can be used as voices without any additional configuration
+  #alloy:
+  #  language: auto
+  #  model: xtts
+  #  speaker: voices/alloy.wav
+  mixed:
+    speaker: voices/mixed # You can also create a folder with a mix of short audio samples
+  my_finetune:
+    model: my_finetune # a custom xtts fine-tune model
+    model_path: voices/my_finetune # the path to the model. Must contain: config.json, vocab.json, model.pth and a sample.wav
+    speaker: voices/my_finetune/sample.wav  
   me:
+    comment: You can add a comment here also, which will be persistent and otherwise ignored.
     model: xtts_v2.0.2 # you can specify an older xtts version
     speaker: voices/me.wav # this could be you
-    language: auto
+    language: auto # You can set a language to skip language detection, ex. 'en'
+    fr:  # you can specify different samples for different languages to improve the quality of multilingual audio
+      speaker: voices/me_fr.wav # this only works if language is 'auto'
+    # You can fine tune the low level audio generation, defaults included below:
     enable_text_splitting: True
     length_penalty: 1.0
     repetition_penalty: 10
@@ -56,4 +75,3 @@ tts-1-hd:
     temperature: 0.75
     top_k: 50
     top_p: 0.85
-    comment: You can add a comment here also, which will be persistent and otherwise ignored.

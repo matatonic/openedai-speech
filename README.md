@@ -18,8 +18,8 @@ Details:
   * You can map your own [piper voices](https://rhasspy.github.io/piper-samples/) via the `voice_to_speaker.yaml` configuration file
 * Model `tts-1-hd` via [coqui-ai/TTS](https://github.com/coqui-ai/TTS) xtts_v2 voice cloning (fast, but requires around 4GB GPU VRAM)
   * Custom cloned voices can be used for tts-1-hd, See: [Custom Voices Howto](#custom-voices-howto)
-  * 🌐 [Multilingual](#multilingual) support with XTTS voices, the language is automatically detected if not set
-  * [Custom fine-tuned XTTS model support](#custom-fine-tuned-model-support)
+  * 🌐 [Multilingual](#multilingual) support with automatic language detection (optional)
+  * [Custom fine-tuned model support](#custom-fine-tuned-model-support)
   * Configurable [generation parameters](#generation-parameters)
   * Streamed output while generating
 * Occasionally, certain words or symbols may sound incorrect, you can fix them with regex via `pre_process_map.yaml`
@@ -29,6 +29,19 @@ Details:
 If you find a better voice match for `tts-1` or `tts-1-hd`, please let me know so I can update the defaults.
 
 ## Recent Changes
+
+Version 0.19.0, 2024-08-21
+
+* Rename docker services to more sensible names
+* Additional default voices for tts-1-hd/xtts
+* Refined and simplified configuration file (backward compatible), see: `voice_to_speaker.default.yaml` and [Custom Voices Howto](#custom-voices-howto)
+* xtts: Automatic use of wav files in `voices/` with no additional configuration needed, just copy the wav file into `voices/` and the voice is available.
+* piper: Automatic model selection based on language detection (model: auto), it selects the highest quality model available.
+* piper: Simpler automatic downloading of piper models if they are not found on the system.
+* Include Facebook fasttext language detection for better, faster language detection
+* 🌐 [Multilingual](#multilingual) support for Piper (38 languages) with automatic language detection and automatic model selection.
+* Additional controls for the use of language detection
+* Thanks [@thiswillbeyourgithub](https://github.com/thiswillbeyourgithub), [@RodolfoCastanheira](https://github.com/RodolfoCastanheira)
 
 Version 0.18.2, 2024-08-16
 
@@ -40,7 +53,7 @@ Version 0.18.1, 2024-08-15
 
 Version 0.18.0, 2024-08-15
 
-* Allow folders of wav samples in xtts. Samples will be combined, allowing for mixed voices and collections of small samples. Still limited to 30 seconds total. Thanks @nathanhere.
+* Allow folders of wav samples in xtts. Samples will be combined, allowing for mixed voices and collections of small samples. Still limited to 30 seconds total. Thanks [@nathanhere](https://github.com/nathanhere).
 * Fix missing yaml requirement in -min image
 * fix fr_FR-tom-medium and other 44khz piper voices (detect non-default sample rates)
 * minor updates
@@ -196,7 +209,7 @@ docker compose -f docker-compose.rocm.yml up
 
 #### CPU only, No GPU (piper only)
 
-> For a minimal docker image with only piper support (<1GB vs. 8GB).
+> For a minimal docker image with only piper support (1.2GB vs. 8GB).
 
 ```shell
 docker compose -f docker-compose.min.yml up
@@ -205,8 +218,8 @@ docker compose -f docker-compose.min.yml up
 ## Server Options
 
 ```shell
-usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [--unload-timer UNLOAD_TIMER] [--use-deepspeed] [--no-cache-speaker] [-P PORT] [-H HOST]
-                 [-L {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [--unload-timer UNLOAD_TIMER] [--piper-supported-languages PIPER_SUPPORTED_LANGUAGES]
+                 [--xtts-supported-languages XTTS_SUPPORTED_LANGUAGES] [--use-deepspeed] [-P PORT] [-H HOST] [-L {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 
 OpenedAI Speech API Server
 
@@ -217,8 +230,11 @@ options:
   --preload PRELOAD     Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use. (default: None)
   --unload-timer UNLOAD_TIMER
                         Idle unload timer for the XTTS model in seconds, Ex. 900 for 15 minutes (default: None)
+  --piper-supported-languages PIPER_SUPPORTED_LANGUAGES
+                        Comma separated list of supported languages for piper (default: ar,ca,cs,cy,da,de,el,en,es,fa,fi,fr,hu,is,it,ka,kk,lb,ne,nl,no,pl,pt,ro,ru,sk,sl,sr,sv,sw,tr,uk,vi,zh)
+  --xtts-supported-languages XTTS_SUPPORTED_LANGUAGES
+                        Comma separated list of supported languages for xtts (default: ar,cs,de,en,es,fr,hi,hu,it,ja,ko,nl,pl,pt,ru,tr,zh-cn)
   --use-deepspeed       Use deepspeed with xtts (this option is unsupported) (default: False)
-  --no-cache-speaker    Don't use the speaker wav embeddings cache (default: False)
   -P PORT, --port PORT  Server tcp port (default: 8000)
   -H HOST, --host HOST  Host to listen on, Ex. 0.0.0.0 (default: 0.0.0.0)
   -L {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
@@ -284,6 +300,16 @@ Example usage:
 python audio_reader.py -s 2 < LICENSE # read the software license - fast
 ```
 
+FYI, The opening line of this file, "GNU AFFERO GENERAL PUBLIC LICENSE", is incorrectly identified as Ukranian by fasttext.
+
+To prevent this kind of behavior, or if you only use a single or small set of languages, you can set the following option on the command line options in the `speech.env` file:
+
+```
+EXTRA_ARGS="--xtts-supported-languages en --piper-supported-languages en"
+```
+
+Setting this to a single language will disable auto-detection and identify all input as that language.
+
 ## OpenAI API Documentation and Guide
 
 * [OpenAI Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech)
@@ -300,10 +326,19 @@ python audio_reader.py -s 2 < LICENSE # read the software license - fast
 ...
 tts-1:
   ryan:
-    model: voices/en_US-ryan-high.onnx
-    speaker: # default speaker
+    model: en_US-ryan-high
+    language: en
 ```
-  3. New models will be downloaded as needed, of you can download them in advance with `download_voices_tts-1.sh`. For example:
+Some models are multi-speaker and require setting a speaker id:
+```yaml
+...
+tts-1:
+  p6544:
+    model: en_US-libritts-high
+    speaker: 9
+    language: en
+```
+  3. New models will be downloaded as needed, or you can download them in advance with `download_voices_tts-1.sh`. For example:
 ```shell
 bash download_voices_tts-1.sh en_US-ryan-high
 ```
@@ -331,16 +366,17 @@ ffmpeg -i input.wav -af "highpass=f=200, lowpass=f=3000" -ac 1 -ar 22050 -ss 00:
 ffmpeg -i input.mkv -af "highpass=f=200, lowpass=f=3000, volume=5, afftdn=nf=25" -ac 1 -ar 22050 -ss 00:13:26.2 -t 6 -y me.wav
 ```
 
-Once your WAV file is prepared, save it in the `/voices/` directory and update the `config/voice_to_speaker.yaml` file with the new file name.
+Once your WAV file is prepared, save it in the `/voices/` directory. If you don't require any further customization, your voice is ready to use and is available by using the name of the wav file as the voice (without the '.wav' part). New in version 0.19.0 - adding xtts voices to the config file is no longer required, but still supported.
 
+To update the `config/voice_to_speaker.yaml` and adjust the default settings,
 For example:
 
 ```yaml
 ...
 tts-1-hd:
   me:
-    model: xtts
-    speaker: voices/me.wav # this could be you
+    speaker: voices/me-v4.wav # this could be you, 'me-v4' would also be available without any customization.
+    speed: 1.2 # speed it up
 ```
 
 You can also use a sub folder for multiple audio samples to combine small samples or to mix different samples together.
@@ -351,7 +387,6 @@ For example:
 ...
 tts-1-hd:
   mixed:
-    model: xtts
     speaker: voices/mixed
 ```
 
@@ -359,7 +394,45 @@ Where the `voices/mixed/` folder contains multiple wav files. The total audio le
 
 ## Multilingual
 
-Multilingual cloning support was added in version 0.11.0 and is available only with the XTTS v2 model. To use multilingual voices with piper simply download a language specific voice.
+The openai API doesn't offer any support for setting a language, so languages are auto-detected by default. This is mostly accurate but sometimes the detection is wrong, especially for very short sentences. You can disable language auto-detection by setting the language for a voice in the `config/voice_to_speaker.yaml` file.
+
+```
+tts-1:
+  alloy:
+    language: en # fixed to en, and auto-detection is disabled
+    model: en_US-libritts_r-medium
+    speaker: 79
+tts-1-hd:
+  alloy:
+    language: en # fixed to en, and auto-detection is disabled
+```
+
+You can also limit the possible languages detected using server startup commands with the `--piper-supported-languages` and `--xtts-supported-languages`. Setting this to a single language will disable/limit language auto detection for all models of that type.
+
+### Piper
+
+Language auto-detection and multilingual support for piper was added in version 0.19.0. Out of the box, with the publicly available piper models, piper supports 38 languages: `ar`, `ca`, `cs`, `cy`, `da`, `de`, `el`, `en`, `es`, `fa`, `fi`, `fr`, `hu`, `is`, `it`, `ka`, `kk`, `lb`, `ne`, `nl`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sr`, `sv`, `sw`, `tr`, `uk`, `vi`, `zh`.
+
+Piper itself doesn't support multiple languages in a model, but by using language auto detection and the large selection of models from piper, a model can be automatically selected for a language. This is enabled by default, and can be customized or disabled by using the configuration file `config/voice_to_speaker.yaml`.
+
+```yaml
+tts-1:
+  alloy:
+    language: auto # If you don't set a specific language, the language will be auto detected
+    # When using language "auto", any detected languages missing a model will have a model automatically chosen and downloaded if needed
+    # if you don't like the automatically chosen voices, you can select and configure your own language entries
+    en:
+      model: en_US-libritts_r-medium # This model will be automatically downloaded it it doesn't exist yet
+      speaker: 79 # 64, 79, 80, 101, 130
+    fr:
+      model: fr_FR-siwis-medium
+```
+
+This can produce surprising and erroneous results when languages are incorrectly identified. Many languages only support a single voice (Arabic, Chinese, etc.).
+
+### XTTS
+
+Multilingual cloning support was added in version 0.11.0.
 
 Coqui XTTSv2 has support for multiple languages: English (`en`), Spanish (`es`), French (`fr`), German (`de`), Italian (`it`), Portuguese (`pt`), Polish (`pl`), Turkish (`tr`), Russian (`ru`), Dutch (`nl`), Czech (`cs`), Arabic (`ar`), Chinese (`zh-cn`), Hungarian (`hu`), Korean (`ko`), Japanese (`ja`), and Hindi (`hi`). When not set, an attempt will be made to automatically detect the language, falling back to English (`en`).
 
@@ -375,7 +448,7 @@ Unfortunately the OpenAI API does not support language, but you can create your 
     language: zh-cn
 ```
 
-3) Don't remove high unicode characters in your `config/pre_process_map.yaml`! If you have these lines, you will need to remove them. For example:
+3) Don't remove all high unicode characters in your `config/pre_process_map.yaml`! If you have these lines, you will need to remove them. For example:
 
 Remove:
 ```yaml
@@ -390,9 +463,23 @@ These lines were added to the `config/pre_process_map.yaml` config file by defau
 
 ## Custom Fine-Tuned Model Support
 
+### Piper
+
+Custom fine-tuned piper models can be installed like any other piper model into the `voices/` folder. Just copy the `<model name>.onnx` and `<model name>.onnx.json` files into the `voices/` folder and configure them in the `config/voice_to_speaker.yaml`, like in this example:
+
+```yaml
+tts-1:
+  custom:
+    model: voices/custom.onnx # The voices/custom.onnx.json file must also be present.
+    #speaker: 2 # set the default speaker if needed
+    language: en # disable language auto detection
+```
+
+### XTTS
+
 Adding a custom xtts model is simple. Here is an example of how to add a custom fine-tuned 'halo' XTTS model.
 
-1) Save the model folder under `voices/` (all 4 files are required, including the vocab.json from the model)
+1) Save the model folder under `voices/` (4 files are required, `config.json`, `vocab.json`, `model.pth` and a `sample.wav`)
 ```
 openedai-speech$ ls voices/halo/
 config.json  vocab.json  model.pth  sample.wav
@@ -400,7 +487,6 @@ config.json  vocab.json  model.pth  sample.wav
 2) Add the custom voice entry under the `tts-1-hd` section of `config/voice_to_speaker.yaml`:
 ```yaml
 tts-1-hd:
-...
   halo:
     model: halo # This name is required to be unique
     speaker: voices/halo/sample.wav # voice sample is required
@@ -425,3 +511,7 @@ tts-1-hd:
     top_k: 50
     top_p: 0.85
 ```
+
+### Attribution
+
+[Facebook Inc's fasttext language detection](https://fasttext.cc/docs/en/language-identification.html) model (lid.176.ftz) is provided unmodified and is distributed under the [Creative Commons Attribution-Share-Alike License 3.0](https://creativecommons.org/licenses/by-sa/3.0/)

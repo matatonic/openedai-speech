@@ -4,3 +4,4 @@ loguru
 numpy<2
 piper-tts
 pyyaml
+fasttext

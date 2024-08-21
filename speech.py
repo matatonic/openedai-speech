@@ -13,6 +13,7 @@ import yaml
 import json
 
 from fastapi.responses import StreamingResponse
+import fasttext
 from loguru import logger
 from openedai import OpenAIStub, BadRequestError, ServiceUnavailableError
 from pydantic import BaseModel
@@ -33,6 +34,72 @@ async def lifespan(app):
 app = OpenAIStub(lifespan=lifespan)
 xtts = None
 args = None
+ft_model = None
+
+xtts_lang_map = {
+    'mzn': 'ar',
+    'ca': 'es',
+    'wuu': 'zh-cn',
+    'yue': 'zh-cn',
+    'zh': 'zh-cn',
+}
+piper_lang_map = {
+    'mzn': 'ar',
+    'wuu': 'zh',
+    'yue': 'zh',
+}
+
+xtts_supported_languages = ['ar', 'cs', 'de', 'en', 'es', 'fr', 'hi', 'hu', 'it', 'ja', 'ko', 'nl', 'pl', 'pt', 'ru', 'tr', 'zh-cn'] # 17 languages
+piper_supported_languages = ['ar', 'ca', 'cs', 'cy', 'da', 'de', 'el', 'en', 'es', 'fa', 'fi', 'fr', 'hu', 'is', 'it', 'ka', 'kk',
+                             'lb', 'ne', 'nl', 'no', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sr', 'sv', 'sw', 'tr', 'uk', 'vi', 'zh'] # 38 languages
+
+def language_detect(text, language_map = {}):
+    # 176 detectable languages:
+    # af als am an ar arz as ast av az azb ba bar bcl be bg bh bn bo bpy br bs bxr ca cbk ce ceb ckb co cs cv cy da de diq dsb dty dv
+    # el eml en eo es et eu fa fi fr frr fy ga gd gl gn gom gu gv he hi hif hr hsb ht hu hy ia id ie ilo io is it ja jbo jv ka kk km kn ko krc ku kv kw ky
+    # la lb lez li lmo lo lrc lt lv mai mg mhr min mk ml mn mr mrj ms mt mwl my myv mzn nah nap nds ne new nl nn no oc or os pa pam pfl pl pms pnb ps pt
+    # qu rm ro ru rue sa sah sc scn sco sd sh si sk sl so sq sr su sv sw ta te tg th tk tl tr tt tyv ug uk ur uz vec vep vi vls vo wa war wuu xal xmf
+    # yi yo yue zh
+
+    global ft_model
+    if ft_model is None:
+        ft_model = fasttext.load_model('lid.176.ftz')
+
+    labels, _ = ft_model.predict(text.replace('\n', ' ')) # must remove \n
+    lang = labels[0].replace("__label__", '')
+    return language_map.get(lang, lang)
+
+def piper_auto_voice(language):
+    quality_map = {
+        'x_low': -1,
+        'low': 0,
+        'medium': 1,
+        'high': 2
+    }
+
+    def get_max_model_size(voice):
+        return max([info['size_bytes'] for name, info in voice['files'].items()])
+    
+    voices = json.load(open('voices/voices.json'))
+    best_voice = None
+    for model, info in voices.items():
+        if info['language']['family'] == language:
+            if best_voice is None:
+                best_voice = info
+            elif quality_map[info['quality']] >= quality_map[best_voice['quality']]:
+                if get_max_model_size(info) > get_max_model_size(best_voice): # try for the largest model size if quality is the same
+                    best_voice = info
+
+    if best_voice is None:
+        logger.debug(f"No matching voice found for {language}, using default, en_US-libritts_r-medium:79")
+        return 'en_US-libritts_r-medium', 79 # return 'alloy' basic by default.
+    
+    if best_voice['num_speakers'] > 1:
+        speaker = 0
+    else:
+        speaker = None
+
+    return best_voice['key'], speaker
 
 def unload_model():
     import torch, gc
@@ -140,11 +207,32 @@ def map_voice_to_speaker(voice: str, model: str):
     default_exists('config/voice_to_speaker.yaml')
     with open('config/voice_to_speaker.yaml', 'r', encoding='utf8') as file:
         voice_map = yaml.safe_load(file)
-        try:
-            return voice_map[model][voice]
 
+        try:
+            mod = voice_map[model]
         except KeyError as e:
-            raise BadRequestError(f"Error loading voice: {voice}, KeyError: {e}", param='voice')
+            raise BadRequestError(f"Error loading voice: {voice}. No configuration for: {model}", param='model')
+
+        try:
+            return mod[voice]
+        
+        except KeyError as e:
+            logger.debug(f"Voice {mod}:{voice} not configured, auto-configuring.")
+            if mod == 'tts-1-hd':
+                # Automatically enable voices if a wav file is present.
+                voice = os.path.basename(voice) # strip any path info, just in case
+                if os.path.isfile(os.path.join('voices', voice + '.wav')):
+                    speaker = os.path.join('voices', voice + '.wav')
+                elif os.path.isdir(os.path.join('voices', voice)):
+                    speaker = os.path.join('voices', voice)
+                else:
+                    raise BadRequestError(f"Error loading voice: {voice}, KeyError: {e}", param='voice')
+                
+                return { 'speaker': speaker }
+
+            else:
+                # auto everything.
+                return {}
 
 class GenerateSpeechRequest(BaseModel):
     model: str = "tts-1" # or "tts-1-hd"
@@ -213,15 +301,45 @@ async def generate_speech(request: GenerateSpeechRequest):
     ffmpeg_args = None
 
     # Use piper for tts-1, and if xtts_device == none use for all models.
-    if model == 'tts-1' or args.xtts_device == 'none':
+    if args.xtts_device == 'none' and model != 'tts-1':
+        logger.info('xtts support is not enabled, the xtts device is "none", perhaps you are using the -min docker image? Changing request to tts-1 (piper)')
+        model = 'tts-1'
+
+    if model == 'tts-1':
         voice_map = map_voice_to_speaker(voice, 'tts-1')
-        try:
-            piper_model = voice_map['model']
-
-        except KeyError as e:
-            raise ServiceUnavailableError(f"Configuration error: tts-1 voice '{voice}' is missing 'model:' setting. KeyError: {e}")
-
+        
+        piper_model = voice_map.get('model', 'auto')
         speaker = voice_map.get('speaker', None)
+        language = voice_map.get('language', 'auto')
+        speed = voice_map.get('speed', speed)
+
+        if len(piper_supported_languages) == 1:
+            language = piper_supported_languages[0]
+
+        if language == 'auto':
+            language = language_detect(input_text, piper_lang_map)
+
+            if language not in piper_supported_languages:
+                logger.warning(f"Detected language {language} not supported, using default")
+            else:
+                logger.debug(f"Detected language: {language}")
+
+            if language in voice_map:
+                piper_model = voice_map[language].get('model', piper_model)
+                speaker = voice_map[language].get('speaker', speaker)
+                logger.debug(f"Switching speaker to [{language}]: {piper_model}:{speaker}")
+            else:
+                logger.debug(f"Detected language {language} not specialized, using default model: {piper_model}")
+
+        if piper_model == 'auto':
+            piper_model, speaker = piper_auto_voice(language)
+            logger.debug(f"Auto selected {piper_model}:{speaker}")
+
+        # if the model has been downloaded already, expand to use the full path
+        if not os.path.isfile(piper_model):
+            model_path = os.path.join('voices', piper_model + '.onnx')
+            if os.path.isfile(model_path):
+                piper_model = model_path
 
         tts_args = ["piper", "--model", str(piper_model), "--data-dir", "voices", "--download-dir", "voices", "--output-raw"]
         if speaker:
@@ -234,6 +352,12 @@ async def generate_speech(request: GenerateSpeechRequest):
         tts_proc.stdin.close()
 
         try:
+            # XXX piper_model may be name only, not file path
+            # XXX file may not exist if still downloading on the fly
+            # XXX TODO: sleep until the json shows up? Most models are 22050hz anyways.
+            if not '.onnx' in piper_model:
+                piper_model = model_path
+
             with open(f"{piper_model}.json", 'r') as pvc_f:
                 conf = json.load(pvc_f)
                 sample_rate = str(conf['audio']['sample_rate'])
@@ -251,12 +375,47 @@ async def generate_speech(request: GenerateSpeechRequest):
     # Use xtts for tts-1-hd
     elif model == 'tts-1-hd':
         voice_map = map_voice_to_speaker(voice, 'tts-1-hd')
+
+        language = voice_map.pop('language', 'auto')
+
+        if len(xtts_supported_languages) == 1 and language == 'auto':
+            language = xtts_supported_languages[0]
+
+        if language == 'auto':
+            try:
+                language = language_detect(input_text, xtts_lang_map)
+
+                if language not in xtts_supported_languages:
+                    logger.warning(f"Detected language {language} not supported, defaulting to en")
+                    language = 'en' # XXX this should be better
+                else:
+                    logger.debug(f"Detected language: {language}")
+
+            except:
+                logger.debug(f"Failed to detect language, defaulting to en")
+                language = 'en' # XXX this should be better
+
+
+        if language in voice_map:
+            # Merge the settings from the language
+            voice_map.update(voice_map[language])
+
         try:
-            tts_model = voice_map.pop('model')
             speaker = voice_map.pop('speaker')
 
         except KeyError as e:
-            raise ServiceUnavailableError(f"Configuration error: tts-1-hd voice '{voice}' is missing setting. KeyError: {e}")
+            # XXX disable with an option
+            # Automatically enable voices if a wav file is present.
+            voice = os.path.basename(voice) # strip any path info, just in case
+            if os.path.isfile(os.path.join('voices', voice + '.wav')):
+                speaker = os.path.join('voices', voice + '.wav')
+            elif os.path.isdir(os.path.join('voices', voice)):
+                speaker = os.path.join('voices', voice)
+            else:
+                raise ServiceUnavailableError(f"Configuration error: tts-1-hd voice '{voice}' is missing speaker: or sample wav not found.")
+
+        # Set the default tts-1-hd model to xtts
+        tts_model = voice_map.pop('model', 'xtts')
 
         if xtts and xtts.model_name != tts_model:
             unload_model()
@@ -268,8 +427,8 @@ async def generate_speech(request: GenerateSpeechRequest):
 
         ffmpeg_args = build_ffmpeg_args(response_format, input_format="f32le", sample_rate="24000")
 
+        speed = voice_map.pop('speed', speed) # The speed value from the config will override the API call value
         # tts speed doesn't seem to work well
-        speed = voice_map.pop('speed', speed)
         if speed < 0.5:
             speed = speed / 0.5
             ffmpeg_args.extend(["-af", "atempo=0.5"]) 
@@ -280,34 +439,18 @@ async def generate_speech(request: GenerateSpeechRequest):
         # Pipe the output from piper/xtts to the input of ffmpeg
         ffmpeg_args.extend(["-"])
 
-        language = voice_map.pop('language', 'auto')
-        if language == 'auto':
-            try:
-                language = detect(input_text)
-                if language not in [
-                    'en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr',
-                    'ru', 'nl', 'cs', 'ar', 'zh-cn', 'hu', 'ko', 'ja', 'hi'
-                ]:
-                    logger.debug(f"Detected language {language} not supported, defaulting to en")
-                    language = 'en'
-                else:
-                    logger.debug(f"Detected language: {language}")
-            except:
-                language = 'en'
-                logger.debug(f"Failed to detect language, defaulting to en")
-
         comment = voice_map.pop('comment', None) # ignored.
 
-        hf_generate_kwargs = dict(
-            speed=speed,
-            **voice_map,
-        )
-
+        hf_generate_kwargs = { 'speed': speed }
         hf_generate_kwargs['enable_text_splitting'] = hf_generate_kwargs.get('enable_text_splitting', True) # change the default to true
+
+        for gen_flag in [ 'length_penalty', 'repetition_penalty', 'temperature', 'top_k', 'top_p' ]:
+            if gen_flag in voice_map:
+                hf_generate_kwargs[gen_flag] = voice_map[gen_flag]
 
         if hf_generate_kwargs['enable_text_splitting']:
             if language == 'zh-cn':
-                split_lang = 'zh'
+                split_lang = 'zh' # xtts split_sentence uses a different name
             else:
                 split_lang = language
             all_text = split_sentence(input_text, split_lang, xtts.xtts.tokenizer.char_limits[split_lang])
@@ -414,19 +557,25 @@ if __name__ == "__main__":
     parser.add_argument('--xtts_device', action='store', default=auto_torch_device(), help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
     parser.add_argument('--preload', action='store', default=None, help="Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use.")
     parser.add_argument('--unload-timer', action='store', default=None, type=int, help="Idle unload timer for the XTTS model in seconds, Ex. 900 for 15 minutes")
+    parser.add_argument('--piper-supported-languages', default=",".join(piper_supported_languages), type=str, help="Comma separated list of supported languages for piper")
+    parser.add_argument('--xtts-supported-languages', default=",".join(xtts_supported_languages), type=str, help="Comma separated list of supported languages for xtts")
     parser.add_argument('--use-deepspeed', action='store_true', default=False, help="Use deepspeed with xtts (this option is unsupported)")
-    parser.add_argument('--no-cache-speaker', action='store_true', default=False, help="Don't use the speaker wav embeddings cache")
     parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")
     parser.add_argument('-H', '--host', action='store', default='0.0.0.0', help="Host to listen on, Ex. 0.0.0.0")
     parser.add_argument('-L', '--log-level', default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the log level")
 
     args = parser.parse_args()
 
+    logger.remove()
+    logger.add(sink=sys.stderr, level=args.log_level)
+
     default_exists('config/pre_process_map.yaml')
     default_exists('config/voice_to_speaker.yaml')
 
-    logger.remove()
-    logger.add(sink=sys.stderr, level=args.log_level)
+    if args.piper_supported_languages:
+        piper_supported_languages = args.piper_supported_languages.split(',')
+    if args.xtts_supported_languages:
+        xtts_supported_languages = args.xtts_supported_languages.split(',')
 
     if args.xtts_device != "none":
         import torch
@@ -434,7 +583,6 @@ if __name__ == "__main__":
         from TTS.tts.models.xtts import Xtts
         from TTS.utils.manage import ModelManager
         from TTS.tts.layers.xtts.tokenizer import split_sentence
-        from langdetect import detect
 
     if args.preload:
         xtts = xtts_wrapper(args.preload, device=args.xtts_device, unload_timer=args.unload_timer)

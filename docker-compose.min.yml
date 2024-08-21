@@ -1,5 +1,6 @@
 services:
-  server:
+  openedai-speech-min:
+    container_name: openedai-speech-min
     build:
       dockerfile: Dockerfile.min # piper for all models, no gpu/nvidia required, ~1GB
     image: ghcr.io/matatonic/openedai-speech-min

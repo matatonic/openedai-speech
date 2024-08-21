@@ -1,5 +1,6 @@
 services:
-  server:
+  openedai-speech:
+    container_name: openedai-speech
     build:
       dockerfile: Dockerfile
     image: ghcr.io/matatonic/openedai-speech

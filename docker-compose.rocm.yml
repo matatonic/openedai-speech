@@ -1,5 +1,6 @@
 services:
-  server:
+  openedai-speech-rocm:
+    container_name: openedai-speech-rocm
     build:
       dockerfile: Dockerfile
       args:

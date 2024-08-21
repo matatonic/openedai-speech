@@ -5,9 +5,8 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -U pip
 ARG TARGETPLATFORM
 RUN <<EOF
 apt-get update
-apt-get install --no-install-recommends -y curl ffmpeg
+apt-get install --no-install-recommends -y curl ffmpeg build-essential
 if [ "$TARGETPLATFORM" != "linux/amd64" ]; then
-	apt-get install --no-install-recommends -y build-essential
 	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 fi
 
@@ -33,7 +32,7 @@ COPY requirements*.txt /app/
 RUN if [ "${USE_ROCM}" = "1" ]; then mv /app/requirements-rocm.txt /app/requirements.txt; fi
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
-COPY *.py *.sh *.default.yaml README.md LICENSE /app/
+COPY *.py *.sh *.default.yaml README.md LICENSE lid.176.ftz /app/
 
 ARG PRELOAD_MODEL
 ENV PRELOAD_MODEL=${PRELOAD_MODEL}
