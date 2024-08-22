@@ -229,8 +229,8 @@ def map_voice_to_speaker(voice: str, model: str):
             return mod[voice]
         
         except KeyError as e:
-            logger.debug(f"Voice {mod}:{voice} not configured, auto-configuring.")
-            if mod == 'tts-1-hd':
+            logger.debug(f"Voice {model}:{voice} not configured, auto-configuring.")
+            if model == 'tts-1-hd':
                 # Automatically enable voices if a wav file is present.
                 voice = os.path.basename(voice) # strip any path info, just in case
                 if os.path.isfile(os.path.join('voices', voice + '.wav')):
@@ -474,7 +474,7 @@ async def generate_speech(request: GenerateSpeechRequest):
             # text -> in_q
 
             audio_path = get_speaker_samples(speaker)
-            logger.debug(f"{voice} wav samples: {audio_path}")
+            logger.debug(f"'{voice}' wav samples: {audio_path}")
 
             try:
                 for text in all_text:
