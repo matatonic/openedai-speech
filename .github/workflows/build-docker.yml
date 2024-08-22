@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'dev'
   release:
     types: [published]
 
@@ -55,7 +56,7 @@ jobs:
           images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Build and push the Docker image to GHCR for the main branch or specific tags
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image (main, latest)
         if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v4
         with:
@@ -63,6 +64,18 @@ jobs:
           file: Dockerfile
           push: true
           tags: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          labels: version=${{ github.run_id }}
+          platforms: linux/amd64,linux/arm64
+
+      # Build and push the Docker image to GHCR for the main branch or specific tags
+      - name: Build and Push Docker Image (dev)
+        if: github.ref == 'refs/heads/dev'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:dev
           labels: version=${{ github.run_id }}
           platforms: linux/amd64,linux/arm64
 
@@ -135,6 +148,18 @@ jobs:
           labels: version=${{ github.run_id }}
           platforms: linux/amd64,linux/arm64
 
+      # Build and push the Docker image to GHCR for the main branch or specific tags
+      - name: Build and Push Docker Image (dev)
+        if: github.ref == 'refs/heads/dev'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile.min
+          push: true
+          tags: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:dev
+          labels: version=${{ github.run_id }}
+          platforms: linux/amd64,linux/arm64
+
       # For tagged releases, build and push the Docker image with the corresponding tag
       - name: Build and Push Docker Image (Tagged)
         if: startsWith(github.ref, 'refs/tags/')
@@ -202,6 +227,20 @@ jobs:
           file: Dockerfile
           push: true
           tags: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          labels: version=${{ github.run_id }}
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            USE_ROCM=1
+
+      # Build and push the Docker image to GHCR for the main branch or specific tags
+      - name: Build and Push Docker Image (dev)
+        if: github.ref == 'refs/heads/dev'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:dev
           labels: version=${{ github.run_id }}
           platforms: linux/amd64,linux/arm64
           build-args: |
