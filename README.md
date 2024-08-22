@@ -34,13 +34,13 @@ Version 0.19.0, 2024-08-21
 
 * Rename docker services to more sensible names
 * Additional default voices for tts-1-hd/xtts
-* Refined and simplified configuration file (backward compatible), see: `voice_to_speaker.default.yaml` and [Custom Voices Howto](#custom-voices-howto)
+* Refine and simplify configuration file (backward compatible), see: `voice_to_speaker.default.yaml` and [Custom Voices Howto](#custom-voices-howto)
 * xtts: Automatic use of wav files in `voices/` with no additional configuration needed, just copy the wav file into `voices/` and the voice is available.
 * piper: Automatic model selection based on language detection (model: auto), it selects the highest quality model available.
 * piper: Simpler automatic downloading of piper models if they are not found on the system.
 * Include Facebook fasttext language detection for better, faster language detection
 * 🌐 [Multilingual](#multilingual) support for Piper (38 languages) with automatic language detection and automatic model selection.
-* Additional controls for the use of language detection
+* Additional controls for the use of language detection and default languages
 * Thanks [@thiswillbeyourgithub](https://github.com/thiswillbeyourgithub), [@RodolfoCastanheira](https://github.com/RodolfoCastanheira)
 
 Version 0.18.2, 2024-08-16
@@ -174,8 +174,8 @@ HF_HOME=voices
 
 ### Option A: Manual installation
 ```shell
-# install curl and ffmpeg
-sudo apt install curl ffmpeg
+# install curl and ffmpeg, build-essential
+sudo apt install curl ffmpeg build-essential
 # Create & activate a new virtual environment (optional but recommended)
 python -m venv .venv
 source .venv/bin/activate
@@ -219,7 +219,7 @@ docker compose -f docker-compose.min.yml up
 
 ```shell
 usage: speech.py [-h] [--xtts_device XTTS_DEVICE] [--preload PRELOAD] [--unload-timer UNLOAD_TIMER] [--piper-supported-languages PIPER_SUPPORTED_LANGUAGES]
-                 [--xtts-supported-languages XTTS_SUPPORTED_LANGUAGES] [--use-deepspeed] [-P PORT] [-H HOST] [-L {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+                 [--xtts-supported-languages XTTS_SUPPORTED_LANGUAGES] [--default-language DEFAULT_LANGUAGE] [--use-deepspeed] [-P PORT] [-H HOST] [-L {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 
 OpenedAI Speech API Server
 
@@ -231,9 +231,12 @@ options:
   --unload-timer UNLOAD_TIMER
                         Idle unload timer for the XTTS model in seconds, Ex. 900 for 15 minutes (default: None)
   --piper-supported-languages PIPER_SUPPORTED_LANGUAGES
-                        Comma separated list of supported languages for piper (default: ar,ca,cs,cy,da,de,el,en,es,fa,fi,fr,hu,is,it,ka,kk,lb,ne,nl,no,pl,pt,ro,ru,sk,sl,sr,sv,sw,tr,uk,vi,zh)
+                        Comma separated list of supported languages for piper (default:
+                        ar,ca,cs,cy,da,de,el,en,es,fa,fi,fr,hu,is,it,ka,kk,lb,ne,nl,no,pl,pt,ro,ru,sk,sl,sr,sv,sw,tr,uk,vi,zh)
   --xtts-supported-languages XTTS_SUPPORTED_LANGUAGES
                         Comma separated list of supported languages for xtts (default: ar,cs,de,en,es,fr,hi,hu,it,ja,ko,nl,pl,pt,ru,tr,zh-cn)
+  --default-language DEFAULT_LANGUAGE
+                        Specify the default language to use if auto detection fails. (default: en)
   --use-deepspeed       Use deepspeed with xtts (this option is unsupported) (default: False)
   -P PORT, --port PORT  Server tcp port (default: 8000)
   -H HOST, --host HOST  Host to listen on, Ex. 0.0.0.0 (default: 0.0.0.0)
@@ -299,16 +302,6 @@ Example usage:
 ```bash
 python audio_reader.py -s 2 < LICENSE # read the software license - fast
 ```
-
-FYI, The opening line of this file, "GNU AFFERO GENERAL PUBLIC LICENSE", is incorrectly identified as Ukranian by fasttext.
-
-To prevent this kind of behavior, or if you only use a single or small set of languages, you can set the following option on the command line options in the `speech.env` file:
-
-```
-EXTRA_ARGS="--xtts-supported-languages en --piper-supported-languages en"
-```
-
-Setting this to a single language will disable auto-detection and identify all input as that language.
 
 ## OpenAI API Documentation and Guide
 
@@ -407,7 +400,14 @@ tts-1-hd:
     language: en # fixed to en, and auto-detection is disabled
 ```
 
-You can also limit the possible languages detected using server startup commands with the `--piper-supported-languages` and `--xtts-supported-languages`. Setting this to a single language will disable/limit language auto detection for all models of that type.
+If you want to disable language detection, or only use a small set of languages, you can use the server startup options `--piper-supported-languages` and/or `--xtts-supported-languages`. Setting this to a single language will disable language auto detection for all models of that type, setting it to a small set will limit language detection to one of those from the list. You can set the command line options in the `speech.env` file:
+
+```
+EXTRA_ARGS="--xtts-supported-languages en,es --piper-supported-languages en,es"
+```
+
+Setting this to a single language will disable auto-detection and identify all input as that language.
+
 
 ### Piper
 

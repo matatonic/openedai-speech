@@ -53,7 +53,7 @@ xtts_supported_languages = ['ar', 'cs', 'de', 'en', 'es', 'fr', 'hi', 'hu', 'it'
 piper_supported_languages = ['ar', 'ca', 'cs', 'cy', 'da', 'de', 'el', 'en', 'es', 'fa', 'fi', 'fr', 'hu', 'is', 'it', 'ka', 'kk',
                              'lb', 'ne', 'nl', 'no', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sr', 'sv', 'sw', 'tr', 'uk', 'vi', 'zh'] # 38 languages
 
-def language_detect(text, language_map = {}):
+def language_detect(text, language_map = {}, supported_languages = piper_supported_languages):
     # 176 detectable languages:
     # af als am an ar arz as ast av az azb ba bar bcl be bg bh bn bo bpy br bs bxr ca cbk ce ceb ckb co cs cv cy da de diq dsb dty dv
     # el eml en eo es et eu fa fi fr frr fy ga gd gl gn gom gu gv he hi hif hr hsb ht hu hy ia id ie ilo io is it ja jbo jv ka kk km kn ko krc ku kv kw ky
@@ -61,13 +61,25 @@ def language_detect(text, language_map = {}):
     # qu rm ro ru rue sa sah sc scn sco sd sh si sk sl so sq sr su sv sw ta te tg th tk tl tr tt tyv ug uk ur uz vec vep vi vls vo wa war wuu xal xmf
     # yi yo yue zh
 
+    if len(supported_languages) == 1:
+        return supported_languages[0]
+
     global ft_model
     if ft_model is None:
         ft_model = fasttext.load_model('lid.176.ftz')
 
-    labels, _ = ft_model.predict(text.replace('\n', ' ')) # must remove \n
-    lang = labels[0].replace("__label__", '')
-    return language_map.get(lang, lang)
+    labels, _ = ft_model.predict(text.lower().replace('\n', ' '), k=5) # must remove \n
+
+    detected_langs = [ lang.replace("__label__", '') for lang in labels ]
+    logger.debug(f"Detected language: {detected_langs}")
+    detected_langs = [ language_map.get(lang, lang) for lang in detected_langs ]
+    detected_langs = [ lang for lang in detected_langs if lang in supported_languages ]
+
+    if len(detected_langs) < 1:
+        logger.debug(f"No usable language detected, using default: {args.default_language}")
+        return args.default_language
+
+    return detected_langs[0]
 
 def piper_auto_voice(language):
     quality_map = {
@@ -313,23 +325,12 @@ async def generate_speech(request: GenerateSpeechRequest):
         language = voice_map.get('language', 'auto')
         speed = voice_map.get('speed', speed)
 
-        if len(piper_supported_languages) == 1:
-            language = piper_supported_languages[0]
-
         if language == 'auto':
-            language = language_detect(input_text, piper_lang_map)
+            language = language_detect(input_text, piper_lang_map, piper_supported_languages)
 
-            if language not in piper_supported_languages:
-                logger.warning(f"Detected language {language} not supported, using default")
-            else:
-                logger.debug(f"Detected language: {language}")
-
-            if language in voice_map:
-                piper_model = voice_map[language].get('model', piper_model)
-                speaker = voice_map[language].get('speaker', speaker)
-                logger.debug(f"Switching speaker to [{language}]: {piper_model}:{speaker}")
-            else:
-                logger.debug(f"Detected language {language} not specialized, using default model: {piper_model}")
+        if language in voice_map:
+            piper_model = voice_map[language].get('model', piper_model)
+            speaker = voice_map[language].get('speaker', speaker)
 
         if piper_model == 'auto':
             piper_model, speaker = piper_auto_voice(language)
@@ -378,23 +379,8 @@ async def generate_speech(request: GenerateSpeechRequest):
 
         language = voice_map.pop('language', 'auto')
 
-        if len(xtts_supported_languages) == 1 and language == 'auto':
-            language = xtts_supported_languages[0]
-
         if language == 'auto':
-            try:
-                language = language_detect(input_text, xtts_lang_map)
-
-                if language not in xtts_supported_languages:
-                    logger.warning(f"Detected language {language} not supported, defaulting to en")
-                    language = 'en' # XXX this should be better
-                else:
-                    logger.debug(f"Detected language: {language}")
-
-            except:
-                logger.debug(f"Failed to detect language, defaulting to en")
-                language = 'en' # XXX this should be better
-
+            language = language_detect(input_text, xtts_lang_map, xtts_supported_languages)
 
         if language in voice_map:
             # Merge the settings from the language
@@ -414,7 +400,6 @@ async def generate_speech(request: GenerateSpeechRequest):
             else:
                 raise ServiceUnavailableError(f"Configuration error: tts-1-hd voice '{voice}' is missing speaker: or sample wav not found.")
 
-        # Set the default tts-1-hd model to xtts
         tts_model = voice_map.pop('model', 'xtts')
 
         if xtts and xtts.model_name != tts_model:
@@ -549,7 +534,7 @@ def auto_torch_device():
     except:
         return 'none'
 
-if __name__ == "__main__":
+def parse_args(argv):
     parser = argparse.ArgumentParser(
         description='OpenedAI Speech API Server',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -559,12 +544,16 @@ if __name__ == "__main__":
     parser.add_argument('--unload-timer', action='store', default=None, type=int, help="Idle unload timer for the XTTS model in seconds, Ex. 900 for 15 minutes")
     parser.add_argument('--piper-supported-languages', default=",".join(piper_supported_languages), type=str, help="Comma separated list of supported languages for piper")
     parser.add_argument('--xtts-supported-languages', default=",".join(xtts_supported_languages), type=str, help="Comma separated list of supported languages for xtts")
+    parser.add_argument('--default-language', default="en", type=str, help="Specify the default language to use if auto detection fails.")
     parser.add_argument('--use-deepspeed', action='store_true', default=False, help="Use deepspeed with xtts (this option is unsupported)")
     parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")
     parser.add_argument('-H', '--host', action='store', default='0.0.0.0', help="Host to listen on, Ex. 0.0.0.0")
     parser.add_argument('-L', '--log-level', default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the log level")
 
-    args = parser.parse_args()
+    return parser.parse_args(argv)
+
+if __name__ == "__main__":
+    args = parse_args(sys.argv[1:])
 
     logger.remove()
     logger.add(sink=sys.stderr, level=args.log_level)
