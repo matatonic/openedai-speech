@@ -19,6 +19,9 @@ from openedai import OpenAIStub, BadRequestError, ServiceUnavailableError
 from pydantic import BaseModel
 import uvicorn
 
+# Get the silence length from an environment variable, default to 0.2 seconds if not set
+SILENCE_LENGTH = float(os.getenv("SILENCE_LENGTH", "0.2"))
+
 @contextlib.asynccontextmanager
 async def lifespan(app):
     yield
@@ -477,10 +480,15 @@ async def generate_speech(request: GenerateSpeechRequest):
             logger.debug(f"'{voice}' wav samples: {audio_path}")
 
             try:
-                for text in all_text:
+                for i, text in enumerate(all_text):
                     for chunk in xtts.tts(text=text, language=language, audio_path=audio_path, **hf_generate_kwargs):
                         exception_check(ex_q)
                         in_q.put(chunk)
+                    
+                    # Add a short pause (e.g., 0.2 seconds) between chunks
+                    if i < len(all_text) - 1:
+                        silence_chunk = bytes([0] * int(24000 * SILENCE_LENGTH / speed * 4))  # Configurable silence length
+                        in_q.put(silence_chunk)   
 
             except BrokenPipeError as e: # client disconnect lands here
                 logger.info("Client disconnected - 'Broken pipe'")
