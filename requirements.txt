@@ -8,6 +8,9 @@ pyyaml
 # Creating an environment where deepspeed works is complex, for now it will be disabled by default.
 #deepspeed
 
+# Web UI
+gradio
+
 torch; sys_platform != "darwin"
 torchaudio; sys_platform != "darwin"
 # for MPS accelerated torch on Mac - doesn't work yet, incomplete support in torch and torchaudio

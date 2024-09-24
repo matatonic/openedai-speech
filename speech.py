@@ -11,11 +11,13 @@ import threading
 import time
 import yaml
 import json
+import gradio as gr
 
 from fastapi.responses import StreamingResponse
 import fasttext
 from loguru import logger
 from openedai import OpenAIStub, BadRequestError, ServiceUnavailableError
+from gradio_ui import gradio_app
 from pydantic import BaseModel
 import uvicorn
 
@@ -539,14 +541,14 @@ def parse_args(argv):
         description='OpenedAI Speech API Server',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--xtts_device', action='store', default=auto_torch_device(), help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
+    parser.add_argument('--xtts-device', action='store', default=auto_torch_device(), help="Set the device for the xtts model. The special value of 'none' will use piper for all models.")
     parser.add_argument('--preload', action='store', default=None, help="Preload a model (Ex. 'xtts' or 'xtts_v2.0.2'). By default it's loaded on first use.")
     parser.add_argument('--unload-timer', action='store', default=None, type=int, help="Idle unload timer for the XTTS model in seconds, Ex. 900 for 15 minutes")
     parser.add_argument('--piper-supported-languages', default=",".join(piper_supported_languages), type=str, help="Comma separated list of supported languages for piper")
     parser.add_argument('--xtts-supported-languages', default=",".join(xtts_supported_languages), type=str, help="Comma separated list of supported languages for xtts")
     parser.add_argument('--default-language', default="en", type=str, help="Specify the default language to use if auto detection fails.")
     parser.add_argument('--use-deepspeed', action='store_true', default=False, help="Use deepspeed with xtts (this option is unsupported)")
-    parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server tcp port")
+    parser.add_argument('-P', '--port', action='store', default=8000, type=int, help="Server TCP port")
     parser.add_argument('-H', '--host', action='store', default='0.0.0.0', help="Host to listen on, Ex. 0.0.0.0")
     parser.add_argument('-L', '--log-level', default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the log level")
 
@@ -554,6 +556,7 @@ def parse_args(argv):
 
 if __name__ == "__main__":
     args = parse_args(sys.argv[1:])
+    baseurl = f"http://{args.host}:{args.port}"
 
     logger.remove()
     logger.add(sink=sys.stderr, level=args.log_level)
@@ -575,6 +578,8 @@ if __name__ == "__main__":
 
     if args.preload:
         xtts = xtts_wrapper(args.preload, device=args.xtts_device, unload_timer=args.unload_timer)
+    
+    app = gr.mount_gradio_app(app, gradio_app(baseurl), path="/")
 
     app.register_model('tts-1')
     app.register_model('tts-1-hd')

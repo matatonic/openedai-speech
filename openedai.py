@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse
 from loguru import logger
+# from speech import parse_args
 
 class OpenAIError(Exception):
     pass
@@ -75,6 +76,8 @@ class OpenAIStub(FastAPI):
             allow_headers=["*"]
         )
 
+        # args = parse_args(sys.argv[1:])
+
         @self.exception_handler(Exception)
         def openai_exception_handler(request: Request, exc: Exception) -> JSONResponse:
             # Generic server errors
@@ -134,12 +137,6 @@ class OpenAIStub(FastAPI):
         @self.get('/v1/dashboard/billing/usage')
         async def handle_billing_usage():
             return { 'total_usage': 0 }
-
-        @self.get("/", response_class=PlainTextResponse)
-        @self.head("/", response_class=PlainTextResponse)
-        @self.options("/", response_class=PlainTextResponse)
-        async def root():
-            return PlainTextResponse(content="", status_code=200 if self.models else 503)
 
         @self.get("/health")
         async def health():
