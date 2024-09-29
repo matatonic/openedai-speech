@@ -1,0 +1,68 @@
+# Limited system user UID
+ARG USE_UID=998
+# Limited system user GID
+ARG USE_GID=998
+
+FROM python:3.11-slim
+
+# Use args
+ARG USE_UID
+ARG USE_GID
+
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y ffmpeg curl
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV USE_UID=$USE_UID
+ENV USE_GID=$USE_GID
+ENV WORKDIR=/app CACHE=/home/app/.cache
+
+# User/Group
+RUN groupadd -r app -g $USE_GID && useradd --no-log-init -m -r -g app app -u $USE_UID && \
+  mkdir -p $WORKDIR/voices $WORKDIR/config $CACHE/pip && chown -R $USE_UID:$USE_GID $WORKDIR $CACHE
+RUN --mount=type=cache,uid=$USE_UID,gid=$USE_GID,target=$CACHE chown -R $USE_UID:$USE_UID $CACHE
+
+ARG TARGETPLATFORM
+RUN <<EOF
+apt-get update
+apt-get install --no-install-recommends -y curl ffmpeg
+if [ "$TARGETPLATFORM" != "linux/amd64" ]; then
+	apt-get install --no-install-recommends -y build-essential
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+fi
+
+# for deepspeed support - image +7.5GB, over the 10GB ghcr.io limit, and no noticable gain in speed or VRAM usage?
+#curl -O https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/cuda-keyring_1.1-1_all.deb
+#dpkg -i cuda-keyring_1.1-1_all.deb
+#rm cuda-keyring_1.1-1_all.deb
+#apt-get install --no-install-recommends -y libaio-dev build-essential cuda-toolkit
+
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+EOF
+
+USER app:app
+#ENV CUDA_HOME=/usr/local/cuda
+ENV PATH="/home/app/.cargo/bin:${PATH}:/home/app/.local/bin"
+
+WORKDIR $WORKDIR
+
+RUN --mount=type=cache,uid=$USE_UID,gid=$USE_GID,target=$CACHE pip --cache-dir=$CACHE/pip install -U pip
+
+ARG USE_ROCM
+ENV USE_ROCM=${USE_ROCM}
+
+COPY --chown=$USE_UID:$USE_GID requirements*.txt $WORKDIR/
+RUN if [ "${USE_ROCM}" = "1" ]; then mv $WORKDIR/requirements-rocm.txt $WORKDIR/requirements.txt; fi
+RUN --mount=type=cache,uid=$USE_UID,gid=$USE_GID,target=$CACHE pip --cache-dir=$CACHE/pip install -r requirements.txt
+
+COPY --chown=$USE_UID:$USE_GID *.py *.sh *.default.yaml README.md LICENSE $WORKDIR/
+RUN mkdir $CACHE/fontconfig && cd /home/app && ln -s .cache/fontconfig .fontconfig
+
+ARG PRELOAD_MODEL
+ENV PRELOAD_MODEL=${PRELOAD_MODEL}
+ENV TTS_HOME=voices
+ENV HF_HOME=voices
+ENV COQUI_TOS_AGREED=1
+
+CMD bash startup.sh
