@@ -180,15 +180,28 @@ bash startup.sh
 
 #### Nvidia GPU (cuda)
 
+##### Local
 ```shell
 docker compose up
 ```
 
+##### Remote
+```shell
+docker pull ghcr.io/matatonic/openedai-speech:latest
+```
+
 #### AMD GPU (ROCm support)
 
+##### Local
 ```shell
 docker compose -f docker-compose.rocm.yml up
 ```
+
+##### Remote
+```shell
+docker pull ghcr.io/matatonic/openedai-speech-rocm:latest
+```
+
 
 #### ARM64 (Apple M-series, Raspberry Pi)
 
