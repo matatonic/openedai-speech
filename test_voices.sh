@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 URL=${1:-http://localhost:8000/v1/audio/speech}
 

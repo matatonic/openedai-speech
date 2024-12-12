@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 export COQUI_TOS_AGREED=1
 export TTS_HOME=voices
 
