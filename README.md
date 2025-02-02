@@ -1,5 +1,16 @@
 # OpenedAI Speech
 
+Notice: This software is mostly obsolete and will no longer be updated.
+
+Some Alternatives:
+
+* https://speaches.ai/
+* https://github.com/remsky/Kokoro-FastAPI
+* https://github.com/astramind-ai/Auralis
+* https://lightning.ai/docs/litserve/home?code_sample=speech
+
+----
+
 An OpenAI API compatible text to speech server.
 
 * Compatible with the OpenAI audio/speech API
