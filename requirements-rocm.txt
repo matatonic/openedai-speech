@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 loguru
-piper-tts
+piper-tts==1.2.0
 coqui-tts[languages]
 langdetect
 pyyaml
